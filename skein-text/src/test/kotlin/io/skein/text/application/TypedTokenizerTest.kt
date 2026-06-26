@@ -1,6 +1,7 @@
 package io.skein.text.application
 
 import io.skein.text.domain.TokenizationModeEnum
+import io.skein.text.domain.TokenPatternConfig
 import io.skein.text.domain.TokenTypeEnum
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -92,5 +93,34 @@ internal class TypedTokenizerTest {
             expected = listOf(TokenTypeEnum.DATE, TokenTypeEnum.AMOUNT),
             actual = aware.tokenize(text = "2024-12-31 1.234,56").map { token -> token.type },
         )
+    }
+
+    @Test
+    internal fun `US config classifies slashed dates and dot-decimal amounts`() {
+        val us = TypedTokenizer(patterns = TokenPatternConfig.US)
+        assertEquals(
+            expected = listOf(TokenTypeEnum.DATE, TokenTypeEnum.AMOUNT),
+            actual = us.tokenize(text = "12/31/2024 1,234.56").map { token -> token.type },
+        )
+    }
+
+    @Test
+    internal fun `US config keeps AMOUNT ahead of NUMERIC so a dot-decimal is not numeric`() {
+        val us = TypedTokenizer(patterns = TokenPatternConfig.US)
+        assertEquals(expected = listOf(TokenTypeEnum.AMOUNT), actual = us.tokenize(text = "12.50").map { it.type })
+    }
+
+    @Test
+    internal fun `a custom rule keeps a symbol-containing code as one token in punctuation-aware mode`() {
+        // Default punctuation-aware mode would split "AB-123" into WORD, SYMBOL, NUMERIC.
+        val withCode = TokenPatternConfig(
+            typedRules = listOf(Regex(pattern = "[A-Z]{2}-\\d{3}") to TokenTypeEnum.ALPHANUMERIC) +
+                TokenPatternConfig.GERMAN.typedRules,
+        )
+        val tokenizer = TypedTokenizer(mode = TokenizationModeEnum.PUNCTUATION_AWARE, patterns = withCode)
+        val tokens = tokenizer.tokenize(text = "AB-123")
+        assertEquals(expected = 1, actual = tokens.size)
+        assertEquals(expected = TokenTypeEnum.ALPHANUMERIC, actual = tokens[0].type)
+        assertEquals(expected = "AB-123", actual = tokens[0].text)
     }
 }

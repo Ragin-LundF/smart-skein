@@ -1,23 +1,27 @@
 package io.skein.text.application
 
 import io.skein.text.domain.Token
+import io.skein.text.domain.TokenPatternConfig
 import io.skein.text.domain.TokenizationModeEnum
 import io.skein.text.domain.TokenTypeEnum
 
 /**
  * Splits text into typed [Token]s, classifying each into a [TokenTypeEnum].
  *
- * The classification is heuristic and tuned for European (notably German) financial text:
- * dates use `.` / `-` / `/` separators and amounts use a comma decimal with optional `.`
- * thousands grouping. These regex patterns are the calibration knobs — real-world data
- * may need locale-specific tuning.
+ * The locale-specific recognizers (date, amount, numeric) come from an injectable
+ * [TokenPatternConfig], defaulting to [TokenPatternConfig.GERMAN]. Supply another preset
+ * (e.g. [TokenPatternConfig.US]) or your own ordered rules to handle different
+ * conventions or add domain patterns. Rule order encodes classification priority.
  *
  * [mode] selects the splitting strategy. [TokenizationModeEnum.WHITESPACE] (default) splits only on
  * whitespace and keeps tokens like `1,234.56` and `AIG-Life` intact. [TokenizationModeEnum.PUNCTUATION_AWARE]
  * splits trailing/leading punctuation into separate `SYMBOL` tokens while keeping dates, amounts and
  * plain numbers whole — useful when a consumer needs finer-grained tokens.
  */
-class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEnum.WHITESPACE) {
+class TypedTokenizer(
+    private val mode: TokenizationModeEnum = TokenizationModeEnum.WHITESPACE,
+    private val patterns: TokenPatternConfig = TokenPatternConfig.GERMAN,
+) {
 
     fun tokenize(text: String): List<Token> {
         return when (mode) {
@@ -95,8 +99,8 @@ class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEn
     /** End index (exclusive) of the longest DATE/AMOUNT/NUMERIC match anchored at [start], else [start]. */
     private fun matchTypedAt(text: String, start: Int): Int {
         var bestEnd = start
-        for (pattern in TYPED_PATTERNS) {
-            val match = pattern.matchAt(input = text, index = start)
+        for ((regex, _) in patterns.typedRules) {
+            val match = regex.matchAt(input = text, index = start)
             if (match != null && match.range.last + 1 > bestEnd) {
                 bestEnd = match.range.last + 1
             }
@@ -124,11 +128,13 @@ class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEn
     }
 
     private fun classify(raw: String): TokenTypeEnum {
-        // Ordered most-specific first: a date also looks numeric, an amount also looks numeric.
+        // Typed rules are ordered most-specific first (a date and an amount also look numeric).
+        for ((regex, type) in patterns.typedRules) {
+            if (regex.matches(input = raw)) {
+                return type
+            }
+        }
         return when {
-            DATE.matches(input = raw) -> TokenTypeEnum.DATE
-            AMOUNT.matches(input = raw) -> TokenTypeEnum.AMOUNT
-            NUMERIC.matches(input = raw) -> TokenTypeEnum.NUMERIC
             LETTERS.matches(input = raw) -> TokenTypeEnum.WORD
             ALPHANUMERIC.matches(input = raw) -> TokenTypeEnum.ALPHANUMERIC
             SYMBOLS.matches(input = raw) -> TokenTypeEnum.SYMBOL
@@ -137,12 +143,9 @@ class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEn
     }
 
     private companion object {
-        val DATE = Regex(pattern = "\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}|\\d{4}-\\d{2}-\\d{2}")
-        val AMOUNT = Regex(pattern = "\\d{1,3}(\\.\\d{3})*,\\d{2}|\\d+,\\d{2}|\\d+\\.\\d{2}")
-        val NUMERIC = Regex(pattern = "\\d+([.,]\\d{3})*")
+        // Unicode-general, not locale-specific: kept here rather than in TokenPatternConfig.
         val LETTERS = Regex(pattern = "\\p{L}+")
         val ALPHANUMERIC = Regex(pattern = "[\\p{L}\\d]+")
         val SYMBOLS = Regex(pattern = "[^\\p{L}\\d\\s]+")
-        val TYPED_PATTERNS = listOf(DATE, AMOUNT, NUMERIC)
     }
 }

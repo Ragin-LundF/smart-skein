@@ -67,7 +67,8 @@ folding (e.g. accent stripping); the constructors that accept a normalizer
 ## 2. Typed tokenization — `TypedTokenizer`
 
 Splits text into `Token`s, each tagged with a `TokenTypeEnum`. The classifier is heuristic and
-tuned for **European (notably German) financial text**.
+defaults to **European (notably German) financial text**, but the locale-specific patterns are
+injectable — see [Configuring locale patterns](#configuring-locale-patterns--tokenpatternconfig).
 
 ```kotlin
 val tokenizer = TypedTokenizer()                      // default mode: WHITESPACE
@@ -97,7 +98,7 @@ Classification tries the **most specific pattern first** (a date also looks nume
 
 ### Tokenization modes — `TokenizationModeEnum`
 
-The single constructor knob, `mode`, decides how punctuation is handled:
+The `mode` constructor knob decides how punctuation is handled:
 
 ```kotlin
 TypedTokenizer(mode = TokenizationModeEnum.WHITESPACE)         // default
@@ -113,13 +114,42 @@ TypedTokenizer(mode = TokenizationModeEnum.PUNCTUATION_AWARE)
 **pick `WHITESPACE`** (default) when symbol-joined tokens like `AIG-Life` are meaningful and should
 stay together.
 
-### Calibration knobs (data scientists)
+### Configuring locale patterns — `TokenPatternConfig`
 
-The regex patterns in `TypedTokenizer` *are* the calibration surface. They assume European
-conventions: `.`/`-`/`/` date separators and **comma-decimal** amounts. If your data is US-style
-(`$1,234.56`) or another locale, the date/amount detection will misfire — adjust by tokenizing into
-a custom type scheme upstream, or treat the patterns as the thing to fork. There is no per-instance
-regex injection; the patterns are module-internal.
+The `DATE`/`AMOUNT`/`NUMERIC` regexes are the only locale-specific part of classification (the
+`WORD`/`ALPHANUMERIC`/`SYMBOL` rules are Unicode-general). They live in a `TokenPatternConfig` you
+pass to the constructor, so you can swap conventions without forking the tokenizer:
+
+```kotlin
+TypedTokenizer()                                    // default = TokenPatternConfig.GERMAN
+TypedTokenizer(patterns = TokenPatternConfig.US)    // mm/dd/yyyy dates, dot-decimal amounts
+```
+
+```kotlin
+TypedTokenizer(patterns = TokenPatternConfig.US).tokenize("12/31/2024 1,234.56")
+// Token(text="12/31/2024", type=DATE)
+// Token(text="1,234.56",   type=AMOUNT)
+```
+
+`TokenPatternConfig` is just an **ordered list of `Regex → TokenTypeEnum` rules**. Order is priority:
+the first full match wins for classification, and the longest anchored match wins for boundary
+detection in `PUNCTUATION_AWARE` mode. Keep `DATE` and `AMOUNT` ahead of `NUMERIC` (both also look
+numeric).
+
+Build your own locale, or **add domain recognizers** that should stay one token — e.g. an order code
+that punctuation-aware mode would otherwise split at the `-`:
+
+```kotlin
+val config = TokenPatternConfig(
+    typedRules = listOf(Regex("[A-Z]{2}-\\d{3}") to TokenTypeEnum.ALPHANUMERIC) +
+        TokenPatternConfig.GERMAN.typedRules,        // prepend so it wins, then reuse the EU rules
+)
+TypedTokenizer(mode = TokenizationModeEnum.PUNCTUATION_AWARE, patterns = config)
+    .tokenize("AB-123")                              // → single ALPHANUMERIC token "AB-123"
+```
+
+> **Note:** rules map to the existing seven `TokenTypeEnum` values — you can recognize an IBAN or
+> phone number, but the *label* must be one of the existing types (there is no custom token type).
 
 ---
 
@@ -247,7 +277,7 @@ This `clean → tokens → signature` flow is exactly what `skein-classify` (fea
 
 ```
 io.skein.text
-├─ domain/          Token, TokenTypeEnum, TokenizationModeEnum, PatternSignature, FrequencyModel
+├─ domain/          Token, TokenTypeEnum, TokenizationModeEnum, TokenPatternConfig, PatternSignature, FrequencyModel
 ├─ spi/             TextNormalizer (port)
 ├─ application/     TypedTokenizer, BrokenWordRepairer, SymSpellIndex
 └─ infrastructure/  DefaultTextNormalizer
@@ -257,14 +287,15 @@ io.skein.text
 |------|-------|---------|
 | `TextNormalizer` | spi | `normalize(String): String` |
 | `DefaultTextNormalizer` | infrastructure | the 4-step pipeline above |
-| `TypedTokenizer` | application | `tokenize(String): List<Token>`; ctor `mode` |
+| `TypedTokenizer` | application | `tokenize(String): List<Token>`; ctor `mode`, `patterns` |
 | `Token` | domain | `text`, `type`, `startOffset`, `endOffset` |
+| `TokenPatternConfig` | domain | `typedRules`; presets `GERMAN` (default), `US` |
 | `PatternSignature` | domain | `of(tokens)`, `render()`, `types` |
 | `FrequencyModel` | domain | `learn`/`learnAll`/`frequency`/`isKnown`/`knownWords`/`serialize`/`deserialize` |
 | `BrokenWordRepairer` | application | `repair(String): String`; ctor knobs |
 
-> **Calibration reminder:** token classification is heuristic and locale-tuned. The regex patterns in
-> `TypedTokenizer` and the privacy threshold in `FrequencyModel` are the knobs that adapt Skein to
-> your data — treat them as the first thing to tune when results look off.
+> **Calibration reminder:** token classification is heuristic and locale-tuned. The `TokenPatternConfig`
+> passed to `TypedTokenizer` and the privacy threshold in `FrequencyModel` are the knobs that adapt
+> Skein to your data — treat them as the first thing to tune when results look off.
 </content>
 </invoke>
