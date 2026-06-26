@@ -59,9 +59,15 @@ class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEn
     }
 
     private fun emitNextToken(text: String, start: Int, tokens: MutableList<Token>): Int {
-        val typedEnd = matchTypedAt(text, start)
+        val typedEnd = matchTypedAt(text = text, start = start)
         if (typedEnd > start) {
-            addToken(tokens, text, start, typedEnd, classify(text.substring(start, typedEnd)))
+            addToken(
+                tokens = tokens,
+                text = text,
+                start = start,
+                end = typedEnd,
+                type = classify(raw = text.substring(startIndex = start, endIndex = typedEnd)),
+            )
             return typedEnd
         }
         if (text[start].isLetterOrDigit()) {
@@ -69,14 +75,20 @@ class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEn
             while (end < text.length && text[end].isLetterOrDigit()) {
                 end++
             }
-            addToken(tokens, text, start, end, classifyAlphanumericRun(text.substring(start, end)))
+            addToken(
+                tokens = tokens,
+                text = text,
+                start = start,
+                end = end,
+                type = classifyAlphanumericRun(run = text.substring(startIndex = start, endIndex = end)),
+            )
             return end
         }
         var end = start
         while (end < text.length && !text[end].isWhitespace() && !text[end].isLetterOrDigit()) {
             end++
         }
-        addToken(tokens, text, start, end, TokenTypeEnum.SYMBOL)
+        addToken(tokens = tokens, text = text, start = start, end = end, type = TokenTypeEnum.SYMBOL)
         return end
     }
 
@@ -84,7 +96,7 @@ class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEn
     private fun matchTypedAt(text: String, start: Int): Int {
         var bestEnd = start
         for (pattern in TYPED_PATTERNS) {
-            val match = pattern.matchAt(text, start)
+            val match = pattern.matchAt(input = text, index = start)
             if (match != null && match.range.last + 1 > bestEnd) {
                 bestEnd = match.range.last + 1
             }
@@ -93,12 +105,19 @@ class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEn
     }
 
     private fun addToken(tokens: MutableList<Token>, text: String, start: Int, end: Int, type: TokenTypeEnum) {
-        tokens.add(Token(text = text.substring(start, end), type = type, startOffset = start, endOffset = end))
+        tokens.add(
+            Token(
+                text = text.substring(startIndex = start, endIndex = end),
+                type = type,
+                startOffset = start,
+                endOffset = end,
+            ),
+        )
     }
 
     private fun classifyAlphanumericRun(run: String): TokenTypeEnum {
         return when {
-            LETTERS.matches(run) -> TokenTypeEnum.WORD
+            LETTERS.matches(input = run) -> TokenTypeEnum.WORD
             run.all { character -> character.isDigit() } -> TokenTypeEnum.NUMERIC
             else -> TokenTypeEnum.ALPHANUMERIC
         }
@@ -107,23 +126,23 @@ class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEn
     private fun classify(raw: String): TokenTypeEnum {
         // Ordered most-specific first: a date also looks numeric, an amount also looks numeric.
         return when {
-            DATE.matches(raw) -> TokenTypeEnum.DATE
-            AMOUNT.matches(raw) -> TokenTypeEnum.AMOUNT
-            NUMERIC.matches(raw) -> TokenTypeEnum.NUMERIC
-            LETTERS.matches(raw) -> TokenTypeEnum.WORD
-            ALPHANUMERIC.matches(raw) -> TokenTypeEnum.ALPHANUMERIC
-            SYMBOLS.matches(raw) -> TokenTypeEnum.SYMBOL
+            DATE.matches(input = raw) -> TokenTypeEnum.DATE
+            AMOUNT.matches(input = raw) -> TokenTypeEnum.AMOUNT
+            NUMERIC.matches(input = raw) -> TokenTypeEnum.NUMERIC
+            LETTERS.matches(input = raw) -> TokenTypeEnum.WORD
+            ALPHANUMERIC.matches(input = raw) -> TokenTypeEnum.ALPHANUMERIC
+            SYMBOLS.matches(input = raw) -> TokenTypeEnum.SYMBOL
             else -> TokenTypeEnum.WORD_SYMBOL
         }
     }
 
     private companion object {
-        val DATE = Regex("\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}|\\d{4}-\\d{2}-\\d{2}")
-        val AMOUNT = Regex("\\d{1,3}(\\.\\d{3})*,\\d{2}|\\d+,\\d{2}|\\d+\\.\\d{2}")
-        val NUMERIC = Regex("\\d+([.,]\\d{3})*")
-        val LETTERS = Regex("\\p{L}+")
-        val ALPHANUMERIC = Regex("[\\p{L}\\d]+")
-        val SYMBOLS = Regex("[^\\p{L}\\d\\s]+")
+        val DATE = Regex(pattern = "\\d{1,2}[./-]\\d{1,2}[./-]\\d{2,4}|\\d{4}-\\d{2}-\\d{2}")
+        val AMOUNT = Regex(pattern = "\\d{1,3}(\\.\\d{3})*,\\d{2}|\\d+,\\d{2}|\\d+\\.\\d{2}")
+        val NUMERIC = Regex(pattern = "\\d+([.,]\\d{3})*")
+        val LETTERS = Regex(pattern = "\\p{L}+")
+        val ALPHANUMERIC = Regex(pattern = "[\\p{L}\\d]+")
+        val SYMBOLS = Regex(pattern = "[^\\p{L}\\d\\s]+")
         val TYPED_PATTERNS = listOf(DATE, AMOUNT, NUMERIC)
     }
 }

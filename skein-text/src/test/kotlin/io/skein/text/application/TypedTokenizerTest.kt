@@ -6,61 +6,61 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class TypedTokenizerTest {
+internal class TypedTokenizerTest {
 
     private val tokenizer = TypedTokenizer()
 
     private fun typesOf(text: String): List<TokenTypeEnum> {
-        return tokenizer.tokenize(text).map { token -> token.type }
+        return tokenizer.tokenize(text = text).map { token -> token.type }
     }
 
     @Test
-    fun `classifies a plain alphabetic word as WORD`() {
-        assertEquals(expected = listOf(TokenTypeEnum.WORD), actual = typesOf("apartment"))
+    internal fun `classifies a plain alphabetic word as WORD`() {
+        assertEquals(expected = listOf(TokenTypeEnum.WORD), actual = typesOf(text = "apartment"))
     }
 
     @Test
-    fun `classifies dotted slashed and iso dates as DATE`() {
+    internal fun `classifies dotted slashed and iso dates as DATE`() {
         assertEquals(
             expected = listOf(TokenTypeEnum.DATE, TokenTypeEnum.DATE, TokenTypeEnum.DATE),
-            actual = typesOf("31.12.2024 31/12/24 2024-12-31"),
+            actual = typesOf(text = "31.12.2024 31/12/24 2024-12-31"),
         )
     }
 
     @Test
-    fun `classifies grouped and plain amounts as AMOUNT`() {
+    internal fun `classifies grouped and plain amounts as AMOUNT`() {
         assertEquals(
             expected = listOf(TokenTypeEnum.AMOUNT, TokenTypeEnum.AMOUNT, TokenTypeEnum.AMOUNT),
-            actual = typesOf("1.234,56 12,50 12.50"),
+            actual = typesOf(text = "1.234,56 12,50 12.50"),
         )
     }
 
     @Test
-    fun `classifies a plain integer as NUMERIC`() {
-        assertEquals(expected = listOf(TokenTypeEnum.NUMERIC), actual = typesOf("1234"))
+    internal fun `classifies a plain integer as NUMERIC`() {
+        assertEquals(expected = listOf(TokenTypeEnum.NUMERIC), actual = typesOf(text = "1234"))
     }
 
     @Test
-    fun `classifies letters mixed with digits as ALPHANUMERIC`() {
-        assertEquals(expected = listOf(TokenTypeEnum.ALPHANUMERIC), actual = typesOf("AB12"))
+    internal fun `classifies letters mixed with digits as ALPHANUMERIC`() {
+        assertEquals(expected = listOf(TokenTypeEnum.ALPHANUMERIC), actual = typesOf(text = "AB12"))
     }
 
     @Test
-    fun `classifies a symbol-only run as SYMBOL`() {
-        assertEquals(expected = listOf(TokenTypeEnum.SYMBOL), actual = typesOf("-->"))
+    internal fun `classifies a symbol-only run as SYMBOL`() {
+        assertEquals(expected = listOf(TokenTypeEnum.SYMBOL), actual = typesOf(text = "-->"))
     }
 
     @Test
-    fun `classifies a word with internal symbols as WORD_SYMBOL`() {
+    internal fun `classifies a word with internal symbols as WORD_SYMBOL`() {
         assertEquals(
             expected = listOf(TokenTypeEnum.WORD_SYMBOL, TokenTypeEnum.WORD_SYMBOL),
-            actual = typesOf("AIG-Life CustomerNumber:"),
+            actual = typesOf(text = "AIG-Life CustomerNumber:"),
         )
     }
 
     @Test
-    fun `reports correct source offsets`() {
-        val tokens = tokenizer.tokenize("ab  cd")
+    internal fun `reports correct source offsets`() {
+        val tokens = tokenizer.tokenize(text = "ab  cd")
         assertEquals(expected = 0, actual = tokens[0].startOffset)
         assertEquals(expected = 2, actual = tokens[0].endOffset)
         assertEquals(expected = 4, actual = tokens[1].startOffset)
@@ -69,14 +69,14 @@ class TypedTokenizerTest {
     }
 
     @Test
-    fun `returns no tokens for blank input`() {
-        assertTrue(tokenizer.tokenize("   \t\n ").isEmpty())
+    internal fun `returns no tokens for blank input`() {
+        assertTrue(actual = tokenizer.tokenize(text = "   \t\n ").isEmpty())
     }
 
     @Test
-    fun `punctuation-aware mode splits trailing punctuation off words`() {
-        val aware = TypedTokenizer(TokenizationModeEnum.PUNCTUATION_AWARE)
-        val tokens = aware.tokenize("CustomerNumber: AB12")
+    internal fun `punctuation-aware mode splits trailing punctuation off words`() {
+        val aware = TypedTokenizer(mode = TokenizationModeEnum.PUNCTUATION_AWARE)
+        val tokens = aware.tokenize(text = "CustomerNumber: AB12")
         assertEquals(
             expected = listOf(TokenTypeEnum.WORD, TokenTypeEnum.SYMBOL, TokenTypeEnum.ALPHANUMERIC),
             actual = tokens.map { token -> token.type },
@@ -86,11 +86,11 @@ class TypedTokenizerTest {
     }
 
     @Test
-    fun `punctuation-aware mode keeps dates and amounts intact`() {
-        val aware = TypedTokenizer(TokenizationModeEnum.PUNCTUATION_AWARE)
+    internal fun `punctuation-aware mode keeps dates and amounts intact`() {
+        val aware = TypedTokenizer(mode = TokenizationModeEnum.PUNCTUATION_AWARE)
         assertEquals(
             expected = listOf(TokenTypeEnum.DATE, TokenTypeEnum.AMOUNT),
-            actual = aware.tokenize("2024-12-31 1.234,56").map { token -> token.type },
+            actual = aware.tokenize(text = "2024-12-31 1.234,56").map { token -> token.type },
         )
     }
 }

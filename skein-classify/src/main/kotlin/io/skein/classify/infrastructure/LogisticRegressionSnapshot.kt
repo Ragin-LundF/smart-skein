@@ -27,11 +27,11 @@ internal class LogisticRegressionSnapshot(
         for (label in weightsByLabel.keys) {
             logits[label] = scoreFor(label = label, features = features)
         }
-        return PredictionFactory.fromLogScores(logits)
+        return PredictionFactory.fromLogScores(logScores = logits)
     }
 
     private fun scoreFor(label: Label, features: FeatureVector): Double {
-        val weights = weightsByLabel.getValue(label)
+        val weights = weightsByLabel.getValue(key = label)
         var score = biasByLabel[label] ?: 0.0
         for (position in features.indices.indices) {
             score += (weights[features.indices[position]] ?: 0.0) * features.values[position].toDouble()

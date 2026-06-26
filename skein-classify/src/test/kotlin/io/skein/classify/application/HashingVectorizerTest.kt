@@ -6,14 +6,14 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class HashingVectorizerTest {
+internal class HashingVectorizerTest {
 
-    private val vectorizer = HashingVectorizer(HashingConfig(key0 = 1L, key1 = 2L))
+    private val vectorizer = HashingVectorizer(config = HashingConfig(key0 = 1L, key1 = 2L))
 
     @Test
-    fun `produces sorted unique indices aligned with values`() {
-        val vector = vectorizer.vectorize("rent payment")
-        assertTrue(vector.nonZeroCount() > 0)
+    internal fun `produces sorted unique indices aligned with values`() {
+        val vector = vectorizer.vectorize(text = "rent payment")
+        assertTrue(actual = vector.nonZeroCount() > 0)
         assertEquals(expected = vector.indices.size, actual = vector.values.size)
         val sorted = vector.indices.sortedArray()
         assertContentEquals(expected = sorted, actual = vector.indices)
@@ -21,37 +21,37 @@ class HashingVectorizerTest {
     }
 
     @Test
-    fun `shares features between words with common substrings`() {
+    internal fun `shares features between words with common substrings`() {
         // Character n-grams make the representation substring- and typo-tolerant: "rent" and
         // "rental" share n-grams such as "ren"/"ent", so their feature sets overlap.
-        val rent = vectorizer.vectorize("rent")
-        val rental = vectorizer.vectorize("rental")
-        val shared = rent.indices.toSet().intersect(rental.indices.toSet())
-        assertTrue(shared.isNotEmpty(), message = "shared substrings must yield shared features")
+        val rent = vectorizer.vectorize(text = "rent")
+        val rental = vectorizer.vectorize(text = "rental")
+        val shared = rent.indices.toSet().intersect(other = rental.indices.toSet())
+        assertTrue(actual = shared.isNotEmpty(), message = "shared substrings must yield shared features")
     }
 
     @Test
-    fun `counts repeated n-grams cumulatively`() {
+    internal fun `counts repeated n-grams cumulatively`() {
         // The vector is a bag of n-grams, so a repeated token must raise a feature's value.
-        val single = vectorizer.vectorize("abcd")
-        val doubled = vectorizer.vectorize("abcd abcd")
+        val single = vectorizer.vectorize(text = "abcd")
+        val doubled = vectorizer.vectorize(text = "abcd abcd")
         assertTrue(
-            doubled.values.max() > single.values.max(),
+            actual = doubled.values.max() > single.values.max(),
             message = "repeating content must increase at least one feature count",
         )
     }
 
     @Test
-    fun `is deterministic for the same input and key`() {
+    internal fun `is deterministic for the same input and key`() {
         assertContentEquals(
-            expected = vectorizer.vectorize("rent").indices,
-            actual = vectorizer.vectorize("rent").indices,
+            expected = vectorizer.vectorize(text = "rent").indices,
+            actual = vectorizer.vectorize(text = "rent").indices,
         )
     }
 
     @Test
-    fun `keeps all indices within the feature space`() {
-        val vector = vectorizer.vectorize("a longer piece of text with several tokens 123")
-        assertTrue(vector.indices.all { index -> index in 0 until (1 shl 18) })
+    internal fun `keeps all indices within the feature space`() {
+        val vector = vectorizer.vectorize(text = "a longer piece of text with several tokens 123")
+        assertTrue(actual = vector.indices.all { index -> index in 0 until (1 shl 18) })
     }
 }

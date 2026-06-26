@@ -12,10 +12,10 @@ import org.openjdk.jmh.annotations.State
 open class VectorizationBenchmark {
 
     private val text = "rent transfer landlord monthly apartment payment standing order"
-    private val vectorizer = HashingVectorizer(HashingConfig(key0 = 1L, key1 = 2L))
+    private val vectorizer = HashingVectorizer(config = HashingConfig(key0 = 1L, key1 = 2L))
 
     @Benchmark
     open fun vectorize(): FeatureVector {
-        return vectorizer.vectorize(text)
+        return vectorizer.vectorize(text = text)
     }
 }

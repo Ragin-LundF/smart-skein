@@ -10,11 +10,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class ClassificationServiceRetrainTest {
+internal class ClassificationServiceRetrainTest {
 
     private val schema = Schema.define {
-        text("purpose")
-        label("category")
+        text(name = "purpose")
+        label(name = "category")
     }
 
     private fun service(): ClassificationService {
@@ -27,46 +27,50 @@ class ClassificationServiceRetrainTest {
     }
 
     @Test
-    fun `retrain over multiple epochs converges the logistic model from the store`() {
+    internal fun `retrain over multiple epochs converges the logistic model from the store`() {
         val service = service()
         service.learnAll(
-            listOf(
-                Record(mapOf("purpose" to "rent transfer landlord", "category" to "housing")),
-                Record(mapOf("purpose" to "monthly apartment rent", "category" to "housing")),
-                Record(mapOf("purpose" to "salary october payout", "category" to "income")),
-                Record(mapOf("purpose" to "monthly salary payment", "category" to "income")),
+            records = listOf(
+                Record(values = mapOf("purpose" to "rent transfer landlord", "category" to "housing")),
+                Record(values = mapOf("purpose" to "monthly apartment rent", "category" to "housing")),
+                Record(values = mapOf("purpose" to "salary october payout", "category" to "income")),
+                Record(values = mapOf("purpose" to "monthly salary payment", "category" to "income")),
             ),
         )
 
         service.retrain(epochs = 80)
 
-        val prediction = service.classify(Record(mapOf("purpose" to "apartment rent payment")))
-        assertEquals(expected = Label("housing"), actual = prediction.label)
+        val prediction = service.classify(record = Record(values = mapOf("purpose" to "apartment rent payment")))
+        assertEquals(expected = Label(value = "housing"), actual = prediction.label)
         // Retrain keeps the stored observations intact.
         assertEquals(expected = 4, actual = service.metrics().totalObservations)
     }
 
     @Test
-    fun `retrain rejects a non-positive epoch count`() {
+    internal fun `retrain rejects a non-positive epoch count`() {
         assertFailsWith<IllegalArgumentException> {
             service().retrain(epochs = 0)
         }
     }
 
     @Test
-    fun `seeded shuffle retrain is deterministic and still classifies`() {
+    internal fun `seeded shuffle retrain is deterministic and still classifies`() {
         val records = listOf(
-            Record(mapOf("purpose" to "rent transfer landlord", "category" to "housing")),
-            Record(mapOf("purpose" to "monthly apartment rent", "category" to "housing")),
-            Record(mapOf("purpose" to "salary october payout", "category" to "income")),
-            Record(mapOf("purpose" to "monthly salary payment", "category" to "income")),
+            Record(values = mapOf("purpose" to "rent transfer landlord", "category" to "housing")),
+            Record(values = mapOf("purpose" to "monthly apartment rent", "category" to "housing")),
+            Record(values = mapOf("purpose" to "salary october payout", "category" to "income")),
+            Record(values = mapOf("purpose" to "monthly salary payment", "category" to "income")),
         )
-        val sample = Record(mapOf("purpose" to "apartment rent payment"))
+        val sample = Record(values = mapOf("purpose" to "apartment rent payment"))
 
-        val first = service().also { it.learnAll(records); it.retrain(epochs = 80, seed = 42L) }.classify(sample)
-        val second = service().also { it.learnAll(records); it.retrain(epochs = 80, seed = 42L) }.classify(sample)
+        val first = service()
+            .also { it.learnAll(records = records); it.retrain(epochs = 80, seed = 42L) }
+            .classify(record = sample)
+        val second = service()
+            .also { it.learnAll(records = records); it.retrain(epochs = 80, seed = 42L) }
+            .classify(record = sample)
 
-        assertEquals(expected = Label("housing"), actual = first.label)
+        assertEquals(expected = Label(value = "housing"), actual = first.label)
         // Same seed → identical confidence (deterministic shuffle).
         assertEquals(expected = first.confidence, actual = second.confidence, absoluteTolerance = 1e-12)
     }

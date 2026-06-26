@@ -15,6 +15,6 @@ open class HashingBenchmark {
 
     @Benchmark
     open fun sipHash(): Long {
-        return SipHash.hash(data, key0, key1)
+        return SipHash.hash(data = data, key0 = key0, key1 = key1)
     }
 }

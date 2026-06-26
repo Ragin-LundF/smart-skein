@@ -4,10 +4,10 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
-class IntFloatHashMapTest {
+internal class IntFloatHashMapTest {
 
     @Test
-    fun `accumulates repeated keys and emits sorted entries`() {
+    internal fun `accumulates repeated keys and emits sorted entries`() {
         val map = IntFloatHashMap()
         map.addTo(key = 5, delta = 1.0f)
         map.addTo(key = 1, delta = 1.0f)
@@ -19,19 +19,19 @@ class IntFloatHashMapTest {
     }
 
     @Test
-    fun `grows past its initial capacity without losing entries`() {
+    internal fun `grows past its initial capacity without losing entries`() {
         val map = IntFloatHashMap(initialCapacity = 4)
         for (key in 0 until 100) {
             map.addTo(key = key, delta = 1.0f)
         }
         val (indices, values) = map.sortedKeysAndValues()
         assertEquals(expected = 100, actual = map.size())
-        assertContentEquals(expected = IntArray(100) { it }, actual = indices)
-        assertContentEquals(expected = FloatArray(100) { 1.0f }, actual = values)
+        assertContentEquals(expected = IntArray(size = 100) { it }, actual = indices)
+        assertContentEquals(expected = FloatArray(size = 100) { 1.0f }, actual = values)
     }
 
     @Test
-    fun `clear resets the map for reuse`() {
+    internal fun `clear resets the map for reuse`() {
         val map = IntFloatHashMap()
         map.addTo(key = 7, delta = 4.0f)
         map.clear()

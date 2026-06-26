@@ -29,6 +29,6 @@ class SchemaBuilder {
     }
 
     fun build(): Schema {
-        return Schema(fields.toList())
+        return Schema(fields = fields.toList())
     }
 }

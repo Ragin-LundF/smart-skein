@@ -4,33 +4,33 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class SymSpellIndexTest {
+internal class SymSpellIndexTest {
 
-    private val index = SymSpellIndex(setOf("apartment", "payment", "agreement"), maxEditDistance = 1)
+    private val index = SymSpellIndex(words = setOf("apartment", "payment", "agreement"), maxEditDistance = 1)
 
     @Test
-    fun `matches an exact word`() {
-        assertEquals(expected = setOf("apartment"), actual = index.candidates("apartment"))
+    internal fun `matches an exact word`() {
+        assertEquals(expected = setOf("apartment"), actual = index.candidates(query = "apartment"))
     }
 
     @Test
-    fun `matches a word missing one character`() {
-        assertEquals(expected = setOf("apartment"), actual = index.candidates("apartmnt"))
+    internal fun `matches a word missing one character`() {
+        assertEquals(expected = setOf("apartment"), actual = index.candidates(query = "apartmnt"))
     }
 
     @Test
-    fun `matches a single substitution`() {
-        assertEquals(expected = setOf("payment"), actual = index.candidates("paymant"))
+    internal fun `matches a single substitution`() {
+        assertEquals(expected = setOf("payment"), actual = index.candidates(query = "paymant"))
     }
 
     @Test
-    fun `returns nothing beyond the edit distance`() {
-        assertTrue(index.candidates("xyzzy").isEmpty())
+    internal fun `returns nothing beyond the edit distance`() {
+        assertTrue(actual = index.candidates(query = "xyzzy").isEmpty())
     }
 
     @Test
-    fun `does not match across the distance limit`() {
+    internal fun `does not match across the distance limit`() {
         // "aprmnt" is two deletions from "apartment" — outside maxEditDistance = 1.
-        assertTrue(index.candidates("aprmnt").isEmpty())
+        assertTrue(actual = index.candidates(query = "aprmnt").isEmpty())
     }
 }

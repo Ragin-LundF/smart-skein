@@ -12,13 +12,13 @@ import io.skein.text.spi.TextNormalizer
 class DefaultTextNormalizer : TextNormalizer {
 
     override fun normalize(raw: String): String {
-        val withoutControls = CONTROL_CHARS.replace(raw, " ")
-        val collapsed = WHITESPACE.replace(withoutControls, " ")
+        val withoutControls = CONTROL_CHARS.replace(input = raw, replacement = " ")
+        val collapsed = WHITESPACE.replace(input = withoutControls, replacement = " ")
         return collapsed.trim().lowercase()
     }
 
     private companion object {
-        val WHITESPACE = Regex("\\s+")
-        val CONTROL_CHARS = Regex("\\p{Cntrl}")
+        val WHITESPACE = Regex(pattern = "\\s+")
+        val CONTROL_CHARS = Regex(pattern = "\\p{Cntrl}")
     }
 }

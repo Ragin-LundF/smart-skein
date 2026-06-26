@@ -26,7 +26,7 @@ class RecordImportService(
             val result = validator.validate(record = record)
             warnings.addAll(result.warnings)
             if (result.isValid()) {
-                accepted.add(mapper.map(record))
+                accepted.add(mapper.map(record = record))
             } else {
                 rejected.add(RejectedRecord(record = record, reasons = result.errors))
             }

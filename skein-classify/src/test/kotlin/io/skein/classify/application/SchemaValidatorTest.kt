@@ -7,47 +7,47 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class SchemaValidatorTest {
+internal class SchemaValidatorTest {
 
     private val schema = Schema.define {
-        text("purpose")
-        numeric("amount")
-        label("category")
+        text(name = "purpose")
+        numeric(name = "amount")
+        label(name = "category")
     }
-    private val validator = SchemaValidator(schema)
+    private val validator = SchemaValidator(schema = schema)
 
     @Test
-    fun `accepts a complete valid record`() {
+    internal fun `accepts a complete valid record`() {
         val result = validator.validate(
-            Record(mapOf("purpose" to "rent", "amount" to "1200", "category" to "housing")),
+            record = Record(values = mapOf("purpose" to "rent", "amount" to "1200", "category" to "housing")),
         )
-        assertTrue(result.isValid())
-        assertTrue(result.warnings.isEmpty())
+        assertTrue(actual = result.isValid())
+        assertTrue(actual = result.warnings.isEmpty())
     }
 
     @Test
-    fun `rejects a record with a missing label`() {
-        val result = validator.validate(Record(mapOf("purpose" to "rent", "amount" to "1200")))
-        assertFalse(result.isValid())
+    internal fun `rejects a record with a missing label`() {
+        val result = validator.validate(record = Record(values = mapOf("purpose" to "rent", "amount" to "1200")))
+        assertFalse(actual = result.isValid())
         assertEquals(expected = 1, actual = result.errors.size)
     }
 
     @Test
-    fun `rejects a non-numeric value in a numeric field`() {
+    internal fun `rejects a non-numeric value in a numeric field`() {
         val result = validator.validate(
-            Record(mapOf("amount" to "lots", "category" to "housing")),
+            record = Record(values = mapOf("amount" to "lots", "category" to "housing")),
         )
-        assertFalse(result.isValid())
-        assertTrue(result.errors.any { error -> error.contains("amount") })
+        assertFalse(actual = result.isValid())
+        assertTrue(actual = result.errors.any { error -> error.contains(other = "amount") })
     }
 
     @Test
-    fun `warns about missing and unknown fields without rejecting`() {
+    internal fun `warns about missing and unknown fields without rejecting`() {
         val result = validator.validate(
-            Record(mapOf("amount" to "10", "category" to "x", "extra" to "y")),
+            record = Record(values = mapOf("amount" to "10", "category" to "x", "extra" to "y")),
         )
-        assertTrue(result.isValid())
-        assertTrue(result.warnings.any { warning -> warning.contains("purpose") })
-        assertTrue(result.warnings.any { warning -> warning.contains("extra") })
+        assertTrue(actual = result.isValid())
+        assertTrue(actual = result.warnings.any { warning -> warning.contains(other = "purpose") })
+        assertTrue(actual = result.warnings.any { warning -> warning.contains(other = "extra") })
     }
 }

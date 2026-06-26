@@ -31,7 +31,7 @@ class SchemaInference(private val maxCategoricalCardinality: Int = DEFAULT_MAX_C
             if (name == labelField) {
                 specs.add(LabelField(name = name))
             } else {
-                specs.add(inferField(name = name, values = valuesOf(records, name)))
+                specs.add(inferField(name = name, values = valuesOf(records = records, name = name)))
             }
         }
         if (fieldNames.none { name -> name == labelField }) {
@@ -61,7 +61,7 @@ class SchemaInference(private val maxCategoricalCardinality: Int = DEFAULT_MAX_C
         if (distinct in 1 until values.size && distinct <= maxCategoricalCardinality) {
             return CategoricalField(name = name)
         }
-        if (looksLikeIdentifier(values)) {
+        if (looksLikeIdentifier(values = values)) {
             return IdentifierField(name = name)
         }
         return TextField(name = name)
@@ -78,7 +78,7 @@ class SchemaInference(private val maxCategoricalCardinality: Int = DEFAULT_MAX_C
         }
         return values.all { value ->
             value.length >= MIN_IDENTIFIER_LENGTH &&
-                IDENTIFIER.matches(value) &&
+                IDENTIFIER.matches(input = value) &&
                 value.any { character -> character.isDigit() }
         }
     }
@@ -86,6 +86,6 @@ class SchemaInference(private val maxCategoricalCardinality: Int = DEFAULT_MAX_C
     companion object {
         const val DEFAULT_MAX_CATEGORICAL_CARDINALITY = 20
         private const val MIN_IDENTIFIER_LENGTH = 4
-        private val IDENTIFIER = Regex("[\\p{L}\\d]+")
+        private val IDENTIFIER = Regex(pattern = "[\\p{L}\\d]+")
     }
 }
