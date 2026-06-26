@@ -16,18 +16,18 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @Testcontainers
-class PostgresFeatureStoreIntegrationTest {
+internal class PostgresFeatureStoreIntegrationTest {
 
     private fun observation(label: String, vararg indices: Int): LabeledFeatures {
         return LabeledFeatures(
-            label = Label(label),
+            label = Label(value = label),
             features = FeatureVector(indices = indices, values = FloatArray(indices.size) { 1.0f }),
         )
     }
 
     private fun dataSource(): DataSource {
         return TomcatJdbcDataSourceFactory.create(
-            JdbcConnectionConfig(
+            config = JdbcConnectionConfig(
                 jdbcUrl = postgres.jdbcUrl,
                 username = postgres.username,
                 password = postgres.password,
@@ -36,35 +36,35 @@ class PostgresFeatureStoreIntegrationTest {
     }
 
     @AfterTest
-    fun cleanUp() {
+    internal fun cleanUp() {
         // Each test creates its own store/table; clear shared table to keep tests independent.
-        PostgresFeatureStore(dataSource()).clear()
+        PostgresFeatureStore(dataSource = dataSource()).clear()
     }
 
     @Test
-    fun `persists and reads back observations preserving order`() {
-        val store = PostgresFeatureStore(dataSource())
+    internal fun `persists and reads back observations preserving order`() {
+        val store = PostgresFeatureStore(dataSource = dataSource())
         store.add(observation("housing", 1, 2, 3))
         store.add(observation("income", 4, 5))
 
         val all = store.all()
         assertEquals(expected = 2, actual = store.size())
-        assertEquals(expected = setOf(Label("housing"), Label("income")), actual = store.labels())
+        assertEquals(expected = setOf(Label(value = "housing"), Label(value = "income")), actual = store.labels())
         assertContentEquals(expected = intArrayOf(1, 2, 3), actual = all.first().features.indices)
     }
 
     @Test
-    fun `clear removes all rows`() {
-        val store = PostgresFeatureStore(dataSource())
+    internal fun `clear removes all rows`() {
+        val store = PostgresFeatureStore(dataSource = dataSource())
         store.add(observation("a", 1))
         store.clear()
         assertEquals(expected = 0, actual = store.size())
-        assertTrue(store.all().isEmpty())
+        assertTrue(actual = store.all().isEmpty())
     }
 
     @Test
-    fun `addAll persists every observation in one batch`() {
-        val store = PostgresFeatureStore(dataSource())
+    internal fun `addAll persists every observation in one batch`() {
+        val store = PostgresFeatureStore(dataSource = dataSource())
         store.addAll(
             listOf(
                 observation("housing", 1, 2),
@@ -73,15 +73,18 @@ class PostgresFeatureStoreIntegrationTest {
             ),
         )
         assertEquals(expected = 3, actual = store.size())
-        assertEquals(expected = setOf(Label("housing"), Label("income"), Label("food")), actual = store.labels())
+        assertEquals(
+            expected = setOf(Label(value = "housing"), Label(value = "income"), Label(value = "food")),
+            actual = store.labels(),
+        )
     }
 
     @Test
-    fun `encrypted store round-trips while storing ciphertext at rest`() {
+    internal fun `encrypted store round-trips while storing ciphertext at rest`() {
         val key = ByteArray(32) { index -> index.toByte() }
         val encryptedStore = PostgresFeatureStore(
             dataSource = dataSource(),
-            encryption = AesGcmEncryption(key),
+            encryption = AesGcmEncryption(key = key),
         )
         encryptedStore.add(observation("secret", 7, 8, 9))
 
@@ -89,8 +92,8 @@ class PostgresFeatureStoreIntegrationTest {
         assertContentEquals(expected = intArrayOf(7, 8, 9), actual = encryptedStore.all().first().features.indices)
 
         // Raw bytes on disk are NOT the plaintext codec output.
-        val plaintext = FeatureVectorCodec().encode(observation("secret", 7, 8, 9).features)
-        assertFalse(rawStoredBytes().contentEquals(plaintext), message = "stored blob must be encrypted")
+        val plaintext = FeatureVectorCodec().encode(vector = observation("secret", 7, 8, 9).features)
+        assertFalse(rawStoredBytes().contentEquals(other = plaintext), message = "stored blob must be encrypted")
     }
 
     private fun rawStoredBytes(): ByteArray {

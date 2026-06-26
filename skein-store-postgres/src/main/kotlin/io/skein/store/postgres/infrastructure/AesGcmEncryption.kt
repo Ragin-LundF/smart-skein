@@ -17,14 +17,14 @@ import javax.crypto.spec.SecretKeySpec
 class AesGcmEncryption(key: ByteArray) : FeatureEncryption {
 
     init {
-        require(key.size == AES_256_KEY_BYTES) { "AES-256 requires a 32-byte key, got ${key.size}" }
+        require(value = key.size == AES_256_KEY_BYTES) { "AES-256 requires a 32-byte key, got ${key.size}" }
     }
 
     private val keySpec = SecretKeySpec(key.copyOf(), "AES")
     private val secureRandom = SecureRandom()
 
     override fun encrypt(plaintext: ByteArray): ByteArray {
-        val iv = ByteArray(IV_BYTES)
+        val iv = ByteArray(size = IV_BYTES)
         secureRandom.nextBytes(iv)
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(TAG_BITS, iv))
@@ -33,9 +33,9 @@ class AesGcmEncryption(key: ByteArray) : FeatureEncryption {
     }
 
     override fun decrypt(ciphertext: ByteArray): ByteArray {
-        require(ciphertext.size > IV_BYTES) { "ciphertext too short to contain an IV" }
-        val iv = ciphertext.copyOfRange(0, IV_BYTES)
-        val body = ciphertext.copyOfRange(IV_BYTES, ciphertext.size)
+        require(value = ciphertext.size > IV_BYTES) { "ciphertext too short to contain an IV" }
+        val iv = ciphertext.copyOfRange(fromIndex = 0, toIndex = IV_BYTES)
+        val body = ciphertext.copyOfRange(fromIndex = IV_BYTES, toIndex = ciphertext.size)
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, keySpec, GCMParameterSpec(TAG_BITS, iv))
         return cipher.doFinal(body)

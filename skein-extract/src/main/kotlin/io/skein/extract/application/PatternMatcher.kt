@@ -14,7 +14,7 @@ class PatternMatcher(private val tokenizer: TypedTokenizer = TypedTokenizer()) {
 
     /** Tokenizes [text] then matches; convenience over [findAll] with an explicit token list. */
     fun findAll(text: String, pattern: TokenPattern): List<IntRange> {
-        return findAll(tokenizer.tokenize(text), pattern)
+        return findAll(tokens = tokenizer.tokenize(text = text), pattern = pattern)
     }
 
     /** Leftmost, non-overlapping matches as inclusive token-index ranges. */
@@ -22,7 +22,7 @@ class PatternMatcher(private val tokenizer: TypedTokenizer = TypedTokenizer()) {
         val matches = ArrayList<IntRange>()
         var start = 0
         while (start < tokens.size) {
-            val end = matchFrom(tokens, pattern.elements, start, 0)
+            val end = matchFrom(tokens = tokens, elements = pattern.elements, tokenIndex = start, elementIndex = 0)
             if (end > start) {
                 matches.add(start until end)
                 start = end
@@ -35,7 +35,7 @@ class PatternMatcher(private val tokenizer: TypedTokenizer = TypedTokenizer()) {
 
     /** Whether [pattern] matches the entire token list. */
     fun matchesFully(tokens: List<Token>, pattern: TokenPattern): Boolean {
-        return matchFrom(tokens, pattern.elements, 0, 0) == tokens.size
+        return matchFrom(tokens = tokens, elements = pattern.elements, tokenIndex = 0, elementIndex = 0) == tokens.size
     }
 
     /** Returns the end token index of a successful match starting at [tokenIndex], or -1. */
@@ -50,16 +50,43 @@ class PatternMatcher(private val tokenizer: TypedTokenizer = TypedTokenizer()) {
         }
         val element = elements[elementIndex]
         return when (element.quantifier) {
-            QuantifierEnum.ONE -> matchOne(tokens, elements, tokenIndex, elementIndex)
-            QuantifierEnum.OPTIONAL -> matchOptional(tokens, elements, tokenIndex, elementIndex)
-            QuantifierEnum.ZERO_OR_MORE -> matchRepeated(tokens, elements, tokenIndex, elementIndex, minCount = 0)
-            QuantifierEnum.ONE_OR_MORE -> matchRepeated(tokens, elements, tokenIndex, elementIndex, minCount = 1)
+            QuantifierEnum.ONE -> matchOne(
+                tokens = tokens,
+                elements = elements,
+                tokenIndex = tokenIndex,
+                elementIndex = elementIndex,
+            )
+            QuantifierEnum.OPTIONAL -> matchOptional(
+                tokens = tokens,
+                elements = elements,
+                tokenIndex = tokenIndex,
+                elementIndex = elementIndex,
+            )
+            QuantifierEnum.ZERO_OR_MORE -> matchRepeated(
+                tokens = tokens,
+                elements = elements,
+                tokenIndex = tokenIndex,
+                elementIndex = elementIndex,
+                minCount = 0,
+            )
+            QuantifierEnum.ONE_OR_MORE -> matchRepeated(
+                tokens = tokens,
+                elements = elements,
+                tokenIndex = tokenIndex,
+                elementIndex = elementIndex,
+                minCount = 1,
+            )
         }
     }
 
     private fun matchOne(tokens: List<Token>, elements: List<PatternElement>, tokenIndex: Int, elementIndex: Int): Int {
         if (tokenIndex < tokens.size && tokens[tokenIndex].type == elements[elementIndex].type) {
-            return matchFrom(tokens, elements, tokenIndex + 1, elementIndex + 1)
+            return matchFrom(
+                tokens = tokens,
+                elements = elements,
+                tokenIndex = tokenIndex + 1,
+                elementIndex = elementIndex + 1,
+            )
         }
         return NO_MATCH
     }
@@ -71,12 +98,17 @@ class PatternMatcher(private val tokenizer: TypedTokenizer = TypedTokenizer()) {
         elementIndex: Int,
     ): Int {
         if (tokenIndex < tokens.size && tokens[tokenIndex].type == elements[elementIndex].type) {
-            val matched = matchFrom(tokens, elements, tokenIndex + 1, elementIndex + 1)
+            val matched = matchFrom(
+                tokens = tokens,
+                elements = elements,
+                tokenIndex = tokenIndex + 1,
+                elementIndex = elementIndex + 1,
+            )
             if (matched >= 0) {
                 return matched
             }
         }
-        return matchFrom(tokens, elements, tokenIndex, elementIndex + 1)
+        return matchFrom(tokens = tokens, elements = elements, tokenIndex = tokenIndex, elementIndex = elementIndex + 1)
     }
 
     private fun matchRepeated(
@@ -93,7 +125,12 @@ class PatternMatcher(private val tokenizer: TypedTokenizer = TypedTokenizer()) {
         }
         var take = available
         while (take >= minCount) {
-            val matched = matchFrom(tokens, elements, tokenIndex + take, elementIndex + 1)
+            val matched = matchFrom(
+                tokens = tokens,
+                elements = elements,
+                tokenIndex = tokenIndex + take,
+                elementIndex = elementIndex + 1,
+            )
             if (matched >= 0) {
                 return matched
             }

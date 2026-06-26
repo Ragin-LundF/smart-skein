@@ -26,7 +26,7 @@ class PostgresFeatureStore(
     }
 
     override fun add(observation: LabeledFeatures) {
-        val stored = encryption.encrypt(codec.encode(observation.features))
+        val stored = encryption.encrypt(plaintext = codec.encode(vector = observation.features))
         dataSource.connection.use { connection ->
             connection.prepareStatement(INSERT_SQL).use { statement ->
                 statement.setString(1, observation.label.value)
@@ -43,7 +43,7 @@ class PostgresFeatureStore(
         }
         // Encode (and encrypt) outside the transaction so only JDBC can fail inside it.
         val rows = observations.map { observation ->
-            observation.label.value to encryption.encrypt(codec.encode(observation.features))
+            observation.label.value to encryption.encrypt(plaintext = codec.encode(vector = observation.features))
         }
         dataSource.connection.use { connection ->
             connection.autoCommit = false
@@ -72,8 +72,10 @@ class PostgresFeatureStore(
             connection.prepareStatement("SELECT label, features FROM $TABLE_NAME ORDER BY id").use { statement ->
                 statement.executeQuery().use { rows ->
                     while (rows.next()) {
-                        val features = codec.decode(encryption.decrypt(rows.getBytes("features")))
-                        observations.add(LabeledFeatures(label = Label(rows.getString("label")), features = features))
+                        val features = codec.decode(bytes = encryption.decrypt(ciphertext = rows.getBytes("features")))
+                        observations.add(
+                            LabeledFeatures(label = Label(value = rows.getString("label")), features = features),
+                        )
                     }
                 }
             }
@@ -87,7 +89,7 @@ class PostgresFeatureStore(
             connection.prepareStatement("SELECT DISTINCT label FROM $TABLE_NAME").use { statement ->
                 statement.executeQuery().use { rows ->
                     while (rows.next()) {
-                        labels.add(Label(rows.getString("label")))
+                        labels.add(Label(value = rows.getString("label")))
                     }
                 }
             }

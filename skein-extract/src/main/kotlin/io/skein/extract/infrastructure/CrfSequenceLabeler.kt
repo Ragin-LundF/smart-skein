@@ -32,27 +32,27 @@ class CrfSequenceLabeler(
     private var currentLearningRate = DEFAULT_LEARNING_RATE
 
     override fun learn(tokens: List<Token>, tags: List<Tag>) {
-        require(tokens.size == tags.size) { "tokens and tags must align in length" }
+        require(value = tokens.size == tags.size) { "tokens and tags must align in length" }
         if (tokens.isEmpty()) {
             return
         }
-        tags.forEach { tag -> registerTag(tag) }
+        tags.forEach { tag -> registerTag(tag = tag) }
         currentLearningRate = initialLearningRate / (1.0 + decayRate * step)
-        val features = extractFeatures(tokens)
-        val alpha = forwardScores(features)
-        val beta = backwardScores(features)
-        val logZ = logSumExp(alpha.last())
-        updateStateAndStart(features, tags, alpha, beta, logZ)
-        updateTransitions(features, tags, alpha, beta, logZ)
+        val features = extractFeatures(tokens = tokens)
+        val alpha = forwardScores(features = features)
+        val beta = backwardScores(features = features)
+        val logZ = logSumExp(values = alpha.last())
+        updateStateAndStart(features = features, tags = tags, alpha = alpha, beta = beta, logZ = logZ)
+        updateTransitions(features = features, tags = tags, alpha = alpha, beta = beta, logZ = logZ)
         step++
     }
 
     override fun label(tokens: List<Token>): List<Tag> {
-        check(tagOrder.isNotEmpty()) { "labeler has not been trained" }
+        check(value = tagOrder.isNotEmpty()) { "labeler has not been trained" }
         if (tokens.isEmpty()) {
             return emptyList()
         }
-        return viterbi(extractFeatures(tokens))
+        return viterbi(features = extractFeatures(tokens = tokens))
     }
 
     private fun registerTag(tag: Tag) {
@@ -62,7 +62,7 @@ class CrfSequenceLabeler(
     }
 
     private fun extractFeatures(tokens: List<Token>): List<List<String>> {
-        return tokens.indices.map { position -> featuresAt(tokens, position) }
+        return tokens.indices.map { position -> featuresAt(tokens = tokens, position = position) }
     }
 
     private fun featuresAt(tokens: List<Token>, position: Int): List<String> {
@@ -73,8 +73,8 @@ class CrfSequenceLabeler(
         return listOf(
             "type=${token.type.name}",
             "word=$text",
-            "prefix=${text.take(AFFIX_LENGTH)}",
-            "suffix=${text.takeLast(AFFIX_LENGTH)}",
+            "prefix=${text.take(n = AFFIX_LENGTH)}",
+            "suffix=${text.takeLast(n = AFFIX_LENGTH)}",
             "prevType=$previousType",
             "nextType=$nextType",
         )
@@ -98,14 +98,15 @@ class CrfSequenceLabeler(
         val tagCount = tagOrder.size
         val alpha = Array(length) { DoubleArray(tagCount) }
         for (tag in 0 until tagCount) {
-            alpha[0][tag] = startScore(tag) + stateScore(tag, features[0])
+            alpha[0][tag] = startScore(tagIndex = tag) + stateScore(tagIndex = tag, features = features[0])
         }
         for (position in 1 until length) {
             for (tag in 0 until tagCount) {
                 val incoming = DoubleArray(tagCount) { previous ->
-                    alpha[position - 1][previous] + transitionScore(previous, tag)
+                    alpha[position - 1][previous] + transitionScore(fromIndex = previous, toIndex = tag)
                 }
-                alpha[position][tag] = logSumExp(incoming) + stateScore(tag, features[position])
+                alpha[position][tag] = logSumExp(values = incoming) +
+                    stateScore(tagIndex = tag, features = features[position])
             }
         }
         return alpha
@@ -118,9 +119,10 @@ class CrfSequenceLabeler(
         for (position in length - 2 downTo 0) {
             for (tag in 0 until tagCount) {
                 val outgoing = DoubleArray(tagCount) { next ->
-                    transitionScore(tag, next) + stateScore(next, features[position + 1]) + beta[position + 1][next]
+                    transitionScore(fromIndex = tag, toIndex = next) +
+                        stateScore(tagIndex = next, features = features[position + 1]) + beta[position + 1][next]
                 }
-                beta[position][tag] = logSumExp(outgoing)
+                beta[position][tag] = logSumExp(values = outgoing)
             }
         }
         return beta
@@ -135,12 +137,12 @@ class CrfSequenceLabeler(
     ) {
         for (position in features.indices) {
             for (tagIndex in tagOrder.indices) {
-                val marginal = exp(alpha[position][tagIndex] + beta[position][tagIndex] - logZ)
+                val marginal = exp(x = alpha[position][tagIndex] + beta[position][tagIndex] - logZ)
                 val gold = if (tags[position] == tagOrder[tagIndex]) 1.0 else 0.0
                 val delta = gold - marginal
-                applyStateGradient(tagOrder[tagIndex], features[position], delta)
+                applyStateGradient(tag = tagOrder[tagIndex], features = features[position], delta = delta)
                 if (position == 0) {
-                    applyStartGradient(tagOrder[tagIndex], delta)
+                    applyStartGradient(tag = tagOrder[tagIndex], delta = delta)
                 }
             }
         }
@@ -157,11 +159,11 @@ class CrfSequenceLabeler(
             for (from in tagOrder.indices) {
                 for (to in tagOrder.indices) {
                     val edge = exp(
-                        alpha[position - 1][from] + transitionScore(from, to) +
-                            stateScore(to, features[position]) + beta[position][to] - logZ,
+                        x = alpha[position - 1][from] + transitionScore(fromIndex = from, toIndex = to) +
+                            stateScore(tagIndex = to, features = features[position]) + beta[position][to] - logZ,
                     )
                     val gold = if (tags[position - 1] == tagOrder[from] && tags[position] == tagOrder[to]) 1.0 else 0.0
-                    applyTransitionGradient(tagOrder[from], tagOrder[to], gold - edge)
+                    applyTransitionGradient(from = tagOrder[from], to = tagOrder[to], delta = gold - edge)
                 }
             }
         }
@@ -192,24 +194,25 @@ class CrfSequenceLabeler(
         val best = Array(length) { DoubleArray(tagCount) }
         val backPointer = Array(length) { IntArray(tagCount) }
         for (tag in 0 until tagCount) {
-            best[0][tag] = startScore(tag) + stateScore(tag, features[0])
+            best[0][tag] = startScore(tagIndex = tag) + stateScore(tagIndex = tag, features = features[0])
         }
         for (position in 1 until length) {
             for (tag in 0 until tagCount) {
-                val previous = bestPrevious(best[position - 1], tag)
+                val previous = bestPrevious(previousScores = best[position - 1], tag = tag)
                 backPointer[position][tag] = previous
-                best[position][tag] = best[position - 1][previous] + transitionScore(previous, tag) +
-                    stateScore(tag, features[position])
+                best[position][tag] = best[position - 1][previous] +
+                    transitionScore(fromIndex = previous, toIndex = tag) +
+                    stateScore(tagIndex = tag, features = features[position])
             }
         }
-        return backtrack(best, backPointer)
+        return backtrack(best = best, backPointer = backPointer)
     }
 
     private fun bestPrevious(previousScores: DoubleArray, tag: Int): Int {
         var bestIndex = 0
         var bestValue = Double.NEGATIVE_INFINITY
         for (previous in previousScores.indices) {
-            val value = previousScores[previous] + transitionScore(previous, tag)
+            val value = previousScores[previous] + transitionScore(fromIndex = previous, toIndex = tag)
             if (value > bestValue) {
                 bestValue = value
                 bestIndex = previous
@@ -220,7 +223,7 @@ class CrfSequenceLabeler(
 
     private fun backtrack(best: Array<DoubleArray>, backPointer: Array<IntArray>): List<Tag> {
         val length = best.size
-        var current = indexOfMax(best[length - 1])
+        var current = indexOfMax(scores = best[length - 1])
         val tagIndices = IntArray(length)
         tagIndices[length - 1] = current
         for (position in length - 1 downTo 1) {
@@ -247,9 +250,9 @@ class CrfSequenceLabeler(
         }
         var sum = 0.0
         for (value in values) {
-            sum += exp(value - max)
+            sum += exp(x = value - max)
         }
-        return max + ln(sum)
+        return max + ln(x = sum)
     }
 
     private companion object {
