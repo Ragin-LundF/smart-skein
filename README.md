@@ -32,6 +32,7 @@ text into recognizable patterns. Each module is one thread that builds on the ot
 | [`skein-classify`](skein-classify) | yes | Record → label classification (Naive Bayes + logistic regression, active learning) |
 | [`skein-extract`](skein-extract) | yes | Text → structured field extraction (pattern DSL, slot filling, CRF token tagging) |
 | [`skein-store-postgres`](skein-store-postgres) | yes | Optional PostgreSQL persistence adapter (AES-256-GCM at rest) |
+| [`skein-cli`](skein-cli) | yes | Command-line tools: active-learning data labeling and batch classification |
 | [`examples`](examples) | no | Runnable samples, including transaction categorization |
 
 ## End-to-end example
