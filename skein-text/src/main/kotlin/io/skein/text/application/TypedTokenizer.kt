@@ -21,8 +21,8 @@ class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEn
 
     fun tokenize(text: String): List<Token> {
         return when (mode) {
-            TokenizationModeEnum.WHITESPACE -> tokenizeWhitespace(text)
-            TokenizationModeEnum.PUNCTUATION_AWARE -> tokenizePunctuationAware(text)
+            TokenizationModeEnum.WHITESPACE -> tokenizeWhitespace(text = text)
+            TokenizationModeEnum.PUNCTUATION_AWARE -> tokenizePunctuationAware(text = text)
         }
     }
 
@@ -39,8 +39,8 @@ class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEn
             while (index < length && !text[index].isWhitespace()) {
                 index++
             }
-            val raw = text.substring(start, index)
-            tokens.add(Token(text = raw, type = classify(raw), startOffset = start, endOffset = index))
+            val raw = text.substring(startIndex = start, endIndex = index)
+            tokens.add(Token(text = raw, type = classify(raw = raw), startOffset = start, endOffset = index))
         }
         return tokens
     }
@@ -53,7 +53,7 @@ class TypedTokenizer(private val mode: TokenizationModeEnum = TokenizationModeEn
                 index++
                 continue
             }
-            index = emitNextToken(text, index, tokens)
+            index = emitNextToken(text = text, start = index, tokens = tokens)
         }
         return tokens
     }
