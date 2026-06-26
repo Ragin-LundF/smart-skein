@@ -45,7 +45,7 @@ class SymSpellIndex(words: Set<String>, private val maxEditDistance: Int) {
         val variants = HashSet<String>()
         variants.add(value)
         var frontier = setOf(value)
-        for (step in 0 until maxEditDistance) {
+        repeat(times = maxEditDistance) {
             val next = HashSet<String>()
             for (token in frontier) {
                 for (index in token.indices) {

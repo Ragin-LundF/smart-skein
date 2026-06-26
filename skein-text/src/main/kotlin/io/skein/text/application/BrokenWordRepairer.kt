@@ -35,8 +35,8 @@ class BrokenWordRepairer(
 
     private fun resegment(fragments: List<String>): List<String> {
         val count = fragments.size
-        val bestScore = DoubleArray(count + 1) { Double.NEGATIVE_INFINITY }
-        val wordStart = IntArray(count + 1) { -1 }
+        val bestScore = DoubleArray(size = count + 1) { Double.NEGATIVE_INFINITY }
+        val wordStart = IntArray(size = count + 1) { -1 }
         bestScore[0] = 0.0
         for (end in 1..count) {
             val earliestStart = maxOf(a = 0, b = end - maxFragmentsPerWord)

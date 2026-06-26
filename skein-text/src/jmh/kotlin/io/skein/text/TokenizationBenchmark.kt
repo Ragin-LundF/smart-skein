@@ -15,6 +15,6 @@ open class TokenizationBenchmark {
 
     @Benchmark
     open fun tokenize(): List<Token> {
-        return tokenizer.tokenize(line)
+        return tokenizer.tokenize(text = line)
     }
 }
