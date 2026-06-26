@@ -59,7 +59,7 @@ fun main(args: Array<String>) {
             else -> println(USAGE)
         }
     }.onFailure { error ->
-        System.err.println("error: ${error.message}")
+        System.err.println("error: ${error.message}\n\n${error.stackTraceToString()}")
         exitProcess(status = 1)
     }
 }
