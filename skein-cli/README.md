@@ -82,9 +82,30 @@ Then reuse the saved model to classify everything in one shot:
 | `--strategy margin\|least-confidence\|entropy` | no | `margin` | How uncertainty is measured. |
 | `--epochs <n>` | no | `5` | SGD passes when training/rebuilding a `logreg` model. |
 | `--key <k0>,<k1>` | no | random | Fixed hashing key for a fresh model (see [Persistence](#persistence--privacy)). |
+| `--scan-limit <n>` | no | `0` | Rows scored per round; `0` scans the whole pool (exact). See [Scaling](#scaling-to-large-pools). |
 
 **`predict`**: `--input`, `--model`, `--out` (all required), `--epochs` (logreg rebuild, default `5`).
 Adds `<label-col>` and `<label-col>_confidence` columns.
+
+## Scaling to large pools
+
+Active learning shines when the unlabeled pool is huge — public datasets, or data generated from
+rules — and you only hand-label the uncertain few. The selection loop is built for that:
+
+- **Vectorize once.** Each row's hashed feature vector (the expensive part) is computed on first
+  sight and cached, so re-ranking after every answer re-hashes nothing.
+- **Parallel scoring.** Vectorizing and scoring fan out across all CPU cores.
+- **Bounded top-K.** Candidates are ranked with a size-`batch` heap, not a full sort of the pool.
+- **`--scan-limit`.** With `0` (default) every round scores the whole pool — exact, and fast into the
+  low millions thanks to the above. For very large pools, set `--scan-limit 100000` (say) and each
+  round scores only a random window of that many rows, making per-round cost independent of pool size
+  and capping memory (only sampled rows are vectorized/cached).
+
+Reference point — a 1,000,000-row pool labeling 20 rows on a laptop: ~4s exact (`--scan-limit 0`),
+~1s sampled (`--scan-limit 20000`).
+
+**Remaining ceiling:** all rows are read into memory at once (the CSV reader materializes the file).
+For pools beyond available heap, pre-split the input or use `--scan-limit` with a sharded input.
 
 ## Enable it locally without runtime pollution
 

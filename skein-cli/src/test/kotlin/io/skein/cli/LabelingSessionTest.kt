@@ -5,6 +5,7 @@ import io.skein.classify.domain.Schema
 import io.skein.classify.domain.UncertaintyStrategyEnum
 import java.io.BufferedReader
 import java.io.StringReader
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -59,7 +60,7 @@ class LabelingSessionTest {
         assertTrue(actual = target.all { row -> row["category"] == "groceries" }, message = "typed label applied")
     }
 
-    private fun session(input: String): LabelingSession {
+    private fun session(input: String, scanLimit: Int = 0, batchSize: Int = 8): LabelingSession {
         val engine = CliEngine.fresh(
             schema = schema,
             classifier = ClassifierKindEnum.NAIVE_BAYES,
@@ -68,12 +69,25 @@ class LabelingSessionTest {
         return LabelingSession(
             engine = engine,
             budget = 100,
-            batchSize = 8,
+            batchSize = batchSize,
             strategy = UncertaintyStrategyEnum.MARGIN,
             epochs = 1,
+            scanLimit = scanLimit,
+            random = Random(seed = 1),
             input = BufferedReader(StringReader(input)),
             output = StringBuilder(),
         )
+    }
+
+    @Test
+    fun `sampling scan-limit still labels the whole pool when every pick is accepted`() {
+        val rows = sampleRows()
+        val unlabeled = rows.count { row -> (row["category"] as String).isEmpty() }
+
+        val labeled = session(input = "y\n".repeat(n = 20), scanLimit = 1, batchSize = 1).run(rows = rows)
+
+        assertEquals(expected = unlabeled, actual = labeled)
+        assertTrue(actual = rows.all { row -> (row["category"] as String).isNotBlank() }, message = "all rows labeled")
     }
 
     private fun sampleRows(): List<MutableMap<String, Any?>> {

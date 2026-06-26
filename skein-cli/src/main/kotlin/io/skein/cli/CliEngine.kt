@@ -1,8 +1,13 @@
 package io.skein.cli
 
 import io.skein.classify.application.ClassificationService
+import io.skein.classify.application.HashingVectorizer
+import io.skein.classify.application.RecordMapper
+import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.HashingConfig
+import io.skein.classify.domain.Prediction
 import io.skein.classify.domain.PrivacyModeEnum
+import io.skein.classify.domain.Record
 import io.skein.classify.domain.Schema
 import io.skein.classify.infrastructure.InMemoryFeatureStore
 import io.skein.classify.infrastructure.LogisticRegressionSgdClassifier
@@ -18,6 +23,12 @@ import java.nio.file.Path
  *
  * Always [PrivacyModeEnum.FEATURES_ONLY] — only irreversible hashed features are kept, never source
  * content, which is what makes the exported model file safe to persist.
+ *
+ * [vectorize] and [classify] split the two halves of `service.classify(record)` so a caller can
+ * vectorize a record **once** and then re-score the cached [FeatureVector] cheaply as the model
+ * changes — the basis of the scalable selection in [PoolSelector]. Both are thread-safe:
+ * [HashingVectorizer] keeps per-thread scratch and the classifier scores a volatile snapshot, so the
+ * same engine can vectorize/score many records concurrently (as long as nothing is learning).
  */
 class CliEngine private constructor(
     val service: ClassificationService,
@@ -25,9 +36,23 @@ class CliEngine private constructor(
     private val store: InMemoryFeatureStore,
     private val schema: Schema,
     private val hashingConfig: HashingConfig,
+    private val classifierModel: Classifier,
 ) {
 
+    private val vectorizer = HashingVectorizer(config = hashingConfig)
+    private val mapper = RecordMapper(schema = schema)
+
     val labelColumn: String get() = schema.labelField.name
+
+    /** Maps and hashes [record] into its sparse feature vector (the expensive, cacheable half). */
+    fun vectorize(record: Record): FeatureVector {
+        return vectorizer.vectorize(text = mapper.map(record = record).featureText)
+    }
+
+    /** Scores an already-vectorized record against the current model (cheap, lock-free). */
+    fun classify(features: FeatureVector): Prediction {
+        return classifierModel.classify(features = features)
+    }
 
     /** Writes the current model (schema, hashing key, classifier kind, observations) to [path]. */
     fun save(path: Path) {
@@ -45,18 +70,14 @@ class CliEngine private constructor(
         /** A new untrained engine for [schema] using [hashingConfig] and the chosen [classifier]. */
         fun fresh(schema: Schema, classifier: ClassifierKindEnum, hashingConfig: HashingConfig): CliEngine {
             val store = InMemoryFeatureStore()
-            val service = serviceFor(
-                schema = schema,
-                classifier = classifier,
-                hashingConfig = hashingConfig,
-                store = store,
-            )
+            val model = classifierFor(kind = classifier)
             return CliEngine(
-                service = service,
+                service = serviceFor(schema = schema, hashingConfig = hashingConfig, model = model, store = store),
                 classifier = classifier,
                 store = store,
                 schema = schema,
                 hashingConfig = hashingConfig,
+                classifierModel = model,
             )
         }
 
@@ -64,10 +85,11 @@ class CliEngine private constructor(
         fun restore(model: LoadedModel, epochs: Int): CliEngine {
             val store = InMemoryFeatureStore()
             store.addAll(observations = model.observations)
+            val classifierModel = classifierFor(kind = model.classifier)
             val service = serviceFor(
                 schema = model.schema,
-                classifier = model.classifier,
                 hashingConfig = model.hashingConfig,
+                model = classifierModel,
                 store = store,
             )
             service.retrain(epochs = epochs)
@@ -77,20 +99,21 @@ class CliEngine private constructor(
                 store = store,
                 schema = model.schema,
                 hashingConfig = model.hashingConfig,
+                classifierModel = classifierModel,
             )
         }
 
         private fun serviceFor(
             schema: Schema,
-            classifier: ClassifierKindEnum,
             hashingConfig: HashingConfig,
+            model: Classifier,
             store: InMemoryFeatureStore,
         ): ClassificationService {
             return ClassificationService(
                 schema = schema,
                 privacyMode = PrivacyModeEnum.FEATURES_ONLY,
                 hashingConfig = hashingConfig,
-                classifier = classifierFor(kind = classifier),
+                classifier = model,
                 featureStore = store,
             )
         }

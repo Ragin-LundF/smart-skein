@@ -9,11 +9,13 @@ import kotlin.io.path.Path
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
+import kotlin.random.Random
 import kotlin.system.exitProcess
 
 private const val DEFAULT_BUDGET = 20
 private const val DEFAULT_BATCH = 8
 private const val DEFAULT_EPOCHS = 5
+private const val DEFAULT_SCAN_LIMIT = 0
 private const val CONFIDENCE_DECIMALS = 4
 
 private val USAGE = """
@@ -33,6 +35,8 @@ private val USAGE = """
         --strategy margin|least-confidence|entropy   uncertainty measure (default margin)
         --epochs <n>         SGD passes for logreg (default $DEFAULT_EPOCHS)
         --key <k0>,<k1>      fixed hashing key for a fresh model (default: random, then saved)
+        --scan-limit <n>     cap rows scored per round; 0 = score the whole pool (default $DEFAULT_SCAN_LIMIT).
+                             Set this (e.g. 100000) for multi-million-row pools to bound per-round work.
 
       predict  Classify every input row using a saved model.
         --input <csv>        input records (required)
@@ -89,6 +93,8 @@ private fun runLabel(flags: Map<String, String>) {
         batchSize = flags["batch"]?.toInt() ?: DEFAULT_BATCH,
         strategy = parseStrategy(value = flags["strategy"]),
         epochs = epochs,
+        scanLimit = flags["scan-limit"]?.toInt() ?: DEFAULT_SCAN_LIMIT,
+        random = Random.Default,
         input = System.`in`.bufferedReader(),
         output = System.out,
     ).run(rows = source.rows)
