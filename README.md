@@ -56,6 +56,3 @@ and GitHub Packages. `skein-bom` aligns all module versions for consumers.
 [MIT](LICENSE).
 
 ---
-
-Implementation is tracked in [`.plan/implementation-plan.md`](.plan/implementation-plan.md);
-progress in [`.plan/progress.md`](.plan/progress.md).
