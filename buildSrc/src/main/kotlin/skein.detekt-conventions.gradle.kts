@@ -1,7 +1,13 @@
-// --- Detekt
-apply plugin: "dev.detekt"
+import dev.detekt.gradle.Detekt
+import dev.detekt.gradle.DetektCreateBaselineTask
 
-tasks.withType(Detekt).configureEach {
+plugins {
+    id("dev.detekt")
+}
+
+val javaVersion = providers.gradleProperty("java_version").get()
+
+tasks.withType<Detekt>().configureEach {
     exclude("**/gen/**")
     reports {
         html.required.set(true) // observe findings in your browser with structure and code snippets
@@ -12,16 +18,15 @@ tasks.withType(Detekt).configureEach {
 }
 
 detekt {
-    config.setFrom("${rootDir}/config/detekt.yml")
+    config.setFrom("$rootDir/config/detekt.yml")
     buildUponDefaultConfig = true
 }
 
-
-tasks.withType(Detekt).configureEach {
-    jvmTarget = java_version
+tasks.withType<Detekt>().configureEach {
+    jvmTarget = javaVersion
 }
-tasks.withType(DetektCreateBaselineTask).configureEach {
-    jvmTarget = java_version
+tasks.withType<DetektCreateBaselineTask>().configureEach {
+    jvmTarget = javaVersion
 }
 
 tasks.matching { it.name == "assemble" }.configureEach {

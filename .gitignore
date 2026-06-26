@@ -11,6 +11,7 @@
 
 # Build targets
 .gradle/*
+buildSrc/.gradle
 **/build/*
 **/target/*
 **/bin/*

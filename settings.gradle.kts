@@ -11,12 +11,11 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'smart-skein'
+rootProject.name = "smart-skein"
 
-include 'skein-bom'
-include 'skein-text'
-include 'skein-classify'
-include 'skein-extract'
-include 'skein-store-postgres'
-include 'examples'
-
+include("skein-bom")
+include("skein-text")
+include("skein-classify")
+include("skein-extract")
+include("skein-store-postgres")
+include("examples")
