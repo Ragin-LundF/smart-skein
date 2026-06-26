@@ -3,7 +3,6 @@ package io.skein.cli
 import io.skein.classify.application.SchemaInference
 import io.skein.classify.domain.HashingConfig
 import io.skein.classify.domain.Record
-import io.skein.classify.domain.UncertaintyStrategyEnum
 import java.util.Locale
 import kotlin.io.path.Path
 import kotlin.io.path.exists
@@ -45,8 +44,8 @@ private val USAGE = """
         --epochs <n>         SGD passes when rebuilding a logreg model (default $DEFAULT_EPOCHS)
 """.trimIndent()
 
-// ponytail: hand-rolled `when` dispatch + flag parsing. Promote to a CLI library only if a third
-// command or grouped sub-commands appear.
+// ponytail: hand-rolled `when` dispatch + flag parsing (unknown flags are rejected, not ignored).
+// Promote to a CLI library only if a third command or grouped sub-commands appear.
 fun main(args: Array<String>) {
     if (args.isEmpty()) {
         println(USAGE)
@@ -66,6 +65,7 @@ fun main(args: Array<String>) {
 }
 
 private fun runLabel(flags: Map<String, String>) {
+    requireKnownFlags(flags = flags, allowed = LABEL_FLAGS)
     val inputPath = Path(flags.required(name = "input"))
     val labelColumn = flags.required(name = "label-col")
     val outPath = Path(flags.required(name = "out"))
@@ -74,6 +74,12 @@ private fun runLabel(flags: Map<String, String>) {
 
     val source = CsvRecordSource(text = inputPath.readText())
     require(value = source.header.isNotEmpty()) { "input CSV has no header row" }
+    if (labelColumn !in source.header) {
+        System.err.println(
+            "warning: --label-col '$labelColumn' is not in the input header ${source.header}; " +
+                "treating all rows as unlabeled",
+        )
+    }
 
     val engine = if (modelPath != null && modelPath.exists()) {
         CliEngine.restore(model = ModelStore.load(path = modelPath), epochs = epochs)
@@ -111,6 +117,7 @@ private fun runLabel(flags: Map<String, String>) {
 }
 
 private fun runPredict(flags: Map<String, String>) {
+    requireKnownFlags(flags = flags, allowed = PREDICT_FLAGS)
     val inputPath = Path(flags.required(name = "input"))
     val outPath = Path(flags.required(name = "out"))
     val engine = CliEngine.restore(
@@ -153,48 +160,4 @@ private fun writeRows(outPath: java.nio.file.Path, header: List<String>, rows: L
 
 private fun withColumn(header: List<String>, column: String): List<String> {
     return if (column in header) header else header + column
-}
-
-private fun parseFlags(tokens: List<String>): Map<String, String> {
-    val flags = LinkedHashMap<String, String>()
-    var index = 0
-    while (index < tokens.size) {
-        val token = tokens[index]
-        require(value = token.startsWith(prefix = "--")) { "expected a --flag, got '$token'" }
-        val name = token.removePrefix(prefix = "--")
-        require(value = index + 1 < tokens.size) { "missing value for --$name" }
-        flags[name] = tokens[index + 1]
-        index += 2
-    }
-    return flags
-}
-
-private fun Map<String, String>.required(name: String): String {
-    return this[name] ?: throw IllegalArgumentException("missing required --$name")
-}
-
-private fun parseClassifier(value: String?): ClassifierKindEnum {
-    return when (value) {
-        null, "nb" -> ClassifierKindEnum.NAIVE_BAYES
-        "logreg" -> ClassifierKindEnum.LOGISTIC_REGRESSION
-        else -> throw IllegalArgumentException("unknown --classifier '$value' (use nb or logreg)")
-    }
-}
-
-private fun parseStrategy(value: String?): UncertaintyStrategyEnum {
-    return when (value) {
-        null, "margin" -> UncertaintyStrategyEnum.MARGIN
-        "least-confidence" -> UncertaintyStrategyEnum.LEAST_CONFIDENCE
-        "entropy" -> UncertaintyStrategyEnum.ENTROPY
-        else -> throw IllegalArgumentException("unknown --strategy '$value'")
-    }
-}
-
-private fun parseKey(value: String?): HashingConfig? {
-    if (value == null) {
-        return null
-    }
-    val parts = value.split(",")
-    require(value = parts.size == 2) { "--key must be '<key0>,<key1>'" }
-    return HashingConfig(key0 = parts[0].trim().toLong(), key1 = parts[1].trim().toLong())
 }

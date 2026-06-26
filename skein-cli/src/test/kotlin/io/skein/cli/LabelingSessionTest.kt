@@ -8,6 +8,7 @@ import java.io.StringReader
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class LabelingSessionTest {
@@ -88,6 +89,15 @@ class LabelingSessionTest {
 
         assertEquals(expected = unlabeled, actual = labeled)
         assertTrue(actual = rows.all { row -> (row["category"] as String).isNotBlank() }, message = "all rows labeled")
+    }
+
+    @Test
+    fun `fails clearly when no rows are labeled to seed the model`() {
+        val rows = listOf(row(purpose = "a", category = ""), row(purpose = "b", category = ""))
+
+        val error = assertFailsWith<IllegalStateException> { session(input = "q\n").run(rows = rows) }
+
+        assertTrue(actual = error.message?.contains("no labeled rows") == true, message = "actionable message")
     }
 
     private fun sampleRows(): List<MutableMap<String, Any?>> {

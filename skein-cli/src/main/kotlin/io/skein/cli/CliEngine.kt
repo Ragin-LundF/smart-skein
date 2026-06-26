@@ -54,6 +54,11 @@ class CliEngine private constructor(
         return classifierModel.classify(features = features)
     }
 
+    /** True once the model has seen at least one labeled observation and can make predictions. */
+    fun isTrained(): Boolean {
+        return classifierModel.labels().isNotEmpty()
+    }
+
     /** Writes the current model (schema, hashing key, classifier kind, observations) to [path]. */
     fun save(path: Path) {
         ModelStore.save(

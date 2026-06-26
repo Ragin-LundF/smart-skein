@@ -50,6 +50,10 @@ class LabelingSession(
             output.appendLine("No unlabeled rows to review.")
             return 0
         }
+        check(engine.isTrained()) {
+            "no labeled rows to learn from — give at least one row a value in column '$labelColumn', " +
+                "or pass --model with an already-trained model to seed the suggestions"
+        }
         return label(pending = pending)
     }
 
