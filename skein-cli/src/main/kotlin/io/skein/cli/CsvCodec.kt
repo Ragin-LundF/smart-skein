@@ -5,20 +5,25 @@ package io.skein.cli
  * inside a quoted field, and quoted fields may span newlines. Sufficient for the tabular training
  * data this CLI labels.
  *
- * ponytail: minimal CSV (comma delimiter, UTF-8, no BOM stripping). Swap for a CSV library if inputs
- * get exotic — other delimiters, encodings, or embedded-NUL handling.
+ * A leading UTF-8 BOM is stripped (Excel/Windows exports emit one), so the first header name is not
+ * silently prefixed with U+FEFF.
+ *
+ * ponytail: minimal CSV (comma delimiter, UTF-8). Swap for a CSV library if inputs get exotic —
+ * other delimiters, encodings, or embedded-NUL handling.
  */
 object CsvCodec {
 
     private const val QUOTE = '"'
     private const val COMMA = ','
+    private const val BOM = "\uFEFF"
 
     /** Parses [text] into rows of string fields. Empty input yields no rows. */
     fun parse(text: String): List<List<String>> {
+        val input = text.removePrefix(prefix = BOM)
         val scan = Scan()
         var index = 0
-        while (index < text.length) {
-            index += scan.step(text = text, index = index)
+        while (index < input.length) {
+            index += scan.step(text = input, index = index)
         }
         scan.endInput()
         return scan.rows

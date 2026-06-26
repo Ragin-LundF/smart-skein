@@ -25,6 +25,13 @@ class CsvCodecTest {
     }
 
     @Test
+    fun `strips a leading UTF-8 BOM from the first header name`() {
+        val rows = CsvCodec.parse(text = "\uFEFFa,b\n1,2\n")
+
+        assertEquals(expected = listOf("a", "b"), actual = rows[0])
+    }
+
+    @Test
     fun `CsvRecordSource maps header columns to record fields`() {
         val source = CsvRecordSource(text = "purpose,category\nrent payment,rent\nsalary,\n")
 
