@@ -1,0 +1,92 @@
+afterEvaluate {
+    tasks.matching { it.name.startsWith("publish") }.configureEach {
+        dependsOn(tasks.named("dokkaGenerateHtmlJar"))
+    }
+    tasks.matching { it.name.contains("MetadataFileFor") || it.name.contains("PomFileFor") }.configureEach {
+        dependsOn(tasks.named("dokkaGenerateHtmlJar"))
+    }
+}
+
+def configurePublication = { publicationComponent ->
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from publicationComponent
+
+                artifactId = project.ext.has("publishArtifactId") ? project.ext.publishArtifactId : project.name
+                version = "${version}"
+                // Add Dokka-generated Javadoc jar (lazy reference)
+                artifact(project.provider { tasks.named("dokkaGenerateHtmlJar").get() })
+                pom {
+                    name = project.ext.has("publishName") ? project.ext.publishName : project.name
+                    description = project.ext.has("publishDescription") ? project.ext.publishDescription : "Skein Library"
+                    url = "https://github.com/Ragin-LundF/smart-skein"
+                    scm {
+                        connection = "scm:git:git@github.com:Ragin-LundF/smart-skein.git"
+                        developerConnection = "scm:git:ssh://github.com/Ragin-LundF/smart-skein.git"
+                        url = "https://github.com/Ragin-LundF/smart-skein"
+                    }
+                    licenses {
+                        license {
+                            name = "MIT"
+                            url = "https://github.com/Ragin-LundF/smart-skein/blob/main/LICENSE"
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = "Ragin-LundF"
+                            name = "Ragin-LundF"
+                            organizationUrl = "https://github.com/Ragin-LundF/smart-skein"
+                        }
+                    }
+                }
+            }
+        }
+
+        repositories {
+            maven {
+                url = layout.buildDirectory.dir('staging-deploy')
+            }
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/Ragin-LundF/smart-skein")
+                credentials {
+                    username = System.getenv("GITHUB_ACTOR")
+                    password = System.getenv("GITHUB_TOKEN")
+                }
+            }
+        }
+    }
+}
+
+// BOM/Platform module
+pluginManager.withPlugin('java-platform') {
+    configurePublication(components.javaPlatform)
+}
+
+// java-library modules
+pluginManager.withPlugin('java') {
+    configurePublication(components.java)
+}
+
+jreleaser {
+    signing {
+        active = 'ALWAYS'
+        verify = false
+        armored = true
+        mode = 'FILE'
+        publicKey = "${rootDir}/ragin_public.pgp"
+        secretKey = "${rootDir}/ragin_secret.pgp"
+    }
+    deploy {
+        maven {
+            mavenCentral {
+                sonatype {
+                    active = 'ALWAYS'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepository('build/staging-deploy')
+                }
+            }
+        }
+    }
+}

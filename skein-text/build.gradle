@@ -1,0 +1,26 @@
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+    id "java-library"
+}
+
+description = "Skein shared text foundation: normalization, typed tokenizer, pattern signatures."
+
+ext {
+    publishName = "Skein Text"
+    publishDescription = "Shared text foundation: normalization, typed tokenizer, pattern signatures."
+}
+
+dependencies {
+    testImplementation libs.kotlin.test.junit5
+    testRuntimeOnly libs.junit.jupiter
+}
+
+apply from: "${rootDir}/config/gradle/benchmarks.gradle"
+
+ext.benchmarkThresholds = [
+        "TokenizationBenchmark.tokenize": 50000.0d,
+]
+
+ext.minLineCoverage = 85
+ext.minBranchCoverage = 85
+apply from: "${rootDir}/config/gradle/coverage.gradle"

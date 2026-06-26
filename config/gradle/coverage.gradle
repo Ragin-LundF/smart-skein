@@ -1,0 +1,43 @@
+// Per-module coverage gate (implementation plan Section 7.1): line + branch, enforced in the build.
+// Kover is used instead of JaCoCo because its IntelliJ coverage agent tracks current Kotlin/JVM
+// versions (JaCoCo's class-file support lags behind JDK 25).
+apply plugin: "org.jetbrains.kotlinx.kover"
+
+// Per-module thresholds (% covered). Calibration knobs: a module may raise them via ext before
+// this script is applied. Defaults are conservative floors that catch coverage regressions.
+def minLine = project.ext.has("minLineCoverage") ? project.ext.minLineCoverage : 70
+def minBranch = project.ext.has("minBranchCoverage") ? project.ext.minBranchCoverage : 50
+
+// Resolve the CoverageUnit enum via the Kover plugin's own classloader: a top-level import fails to
+// compile (plugin not yet on the script classpath) and a fully-qualified reference inside the DSL
+// closures is swallowed as a property lookup on the delegate.
+def koverClassLoader = project.extensions.getByName("kover").getClass().getClassLoader()
+def coverageUnit = Class.forName("kotlinx.kover.gradle.plugin.dsl.CoverageUnit", true, koverClassLoader)
+def lineUnit = Enum.valueOf(coverageUnit, "LINE")
+def branchUnit = Enum.valueOf(coverageUnit, "BRANCH")
+
+kover {
+    reports {
+        filters {
+            excludes {
+                classes("*Benchmark")
+            }
+        }
+        verify {
+            rule {
+                bound {
+                    minValue = minLine
+                    coverageUnits = lineUnit
+                }
+                bound {
+                    minValue = minBranch
+                    coverageUnits = branchUnit
+                }
+            }
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn(tasks.named("koverVerify"))
+}

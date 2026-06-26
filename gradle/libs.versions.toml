@@ -1,0 +1,28 @@
+[versions]
+kotlin = "2.3.21"
+junit = "6.1.0"
+postgresql = "42.7.11"
+tomcat-jdbc = "11.0.23"
+testcontainers = "2.0.5"
+liquibase = "5.0.3"
+
+[libraries]
+# Kotlin test libraries
+kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+
+# --- PostgreSQL persistence adapter
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+tomcat-jdbc = { module = "org.apache.tomcat:tomcat-jdbc", version.ref = "tomcat-jdbc" }
+liquibase-core = { module = "org.liquibase:liquibase-core", version.ref = "liquibase" }
+# Testcontainers 2.x renamed modules: postgres -> testcontainers-postgresql, junit -> testcontainers-junit-jupiter
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
+testcontainers-junit = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+
+[plugins]
+jreleaser = { id = "org.jreleaser", version = "1.24.0" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-dokka = { id = "org.jetbrains.dokka", version = "2.2.0" }
+detekt = { id = "dev.detekt", version = "2.0.0-alpha.5" }
+jmh = { id = "me.champeau.jmh", version = "0.7.3" }
+kover = { id = "org.jetbrains.kotlinx.kover", version = "0.9.8" }

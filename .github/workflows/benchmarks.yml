@@ -1,0 +1,45 @@
+name: Benchmarks
+
+# Performance regression gate (implementation plan Section 5.4). Runs the JMH microbenchmarks for
+# the hot paths (tokenization, hashing, vectorization, scoring) and fails the build if any falls
+# below its configured throughput floor — so a PR that slows a hot path beyond tolerance fails.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmarks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: liberica
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run JMH benchmark gate
+        run: ./gradlew benchmarkGate --no-daemon --stacktrace
+
+      - name: Upload JMH results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmh-results
+          path: '**/build/reports/jmh/results.json'
+          if-no-files-found: ignore

@@ -1,0 +1,30 @@
+# IDEs
+.idea/*
+*.iws
+*.iml
+*.ipr
+!.idea/inspectionProfiles
+!.idea/inspectionProfiles/*
+!.idea/detekt.xml
+!.run/
+.vscode/*
+
+# Build targets
+.gradle/*
+**/build/*
+**/target/*
+**/bin/*
+
+# Other
+.kotlin
+logs/*
+/.gradle/
+/build/
+.settings
+.classpath
+.project
+.plan
+
+# Release / signing — never commit keys (the release workflow materializes these from secrets)
+ragin_*.pgp
+*.gpg

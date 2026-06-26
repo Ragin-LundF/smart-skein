@@ -1,0 +1,61 @@
+// JMH microbenchmarks + performance gate (implementation plan Section 5.4).
+// Benchmarks live in src/jmh/kotlin. `benchmarkGate` runs them and fails if any hot path falls
+// below its configured throughput floor.
+apply plugin: "me.champeau.jmh"
+
+jmh {
+    jmhVersion = "1.37"
+    fork = 1
+    warmupIterations = 1
+    iterations = 3
+    warmup = "500ms"
+    timeOnIteration = "500ms"
+    benchmarkMode = ["thrpt"]
+    timeUnit = "s"
+    resultFormat = "JSON"
+    resultsFile = layout.buildDirectory.file("reports/jmh/results.json")
+    failOnError = true
+}
+
+// Per-benchmark throughput floors (ops/s), keyed by a substring of the benchmark's fully-qualified
+// name. Modules override this. Floors are CALIBRATION KNOBS: deliberately well below observed
+// performance so the gate catches catastrophic regressions (e.g. an accidental O(n^2)) without
+// failing on normal CI-machine variance. Tune upward once a stable baseline is known per runner.
+if (!project.ext.has("benchmarkThresholds")) {
+    project.ext.benchmarkThresholds = [:]
+}
+
+tasks.register("benchmarkGate") {
+    group = "verification"
+    description = "Runs JMH benchmarks and fails if a hot path falls below its throughput floor."
+    dependsOn(tasks.named("jmh"))
+    doLast {
+        def resultsFile = layout.buildDirectory.file("reports/jmh/results.json").get().asFile
+        if (!resultsFile.exists()) {
+            throw new GradleException("JMH results file not found: ${resultsFile}")
+        }
+        def results = new groovy.json.JsonSlurper().parse(resultsFile)
+        def thresholds = project.ext.benchmarkThresholds
+        def failures = []
+        def checks = 0
+        results.each { entry ->
+            def name = entry.benchmark
+            def score = entry.primaryMetric.score as double
+            thresholds.each { key, floor ->
+                if (name.contains(key)) {
+                    checks++
+                    if (score < (floor as double)) {
+                        failures << "${name}: ${String.format('%.0f', score)} ops/s < floor ${floor} ops/s"
+                    }
+                }
+            }
+        }
+        if (!failures.isEmpty()) {
+            throw new GradleException("Benchmark gate FAILED:\n  " + failures.join("\n  "))
+        }
+        if (checks == 0) {
+            throw new GradleException("Benchmark gate ran no threshold checks; configure project.ext.benchmarkThresholds")
+        }
+        logger.lifecycle("Benchmark gate passed: ${checks} check(s) across ${results.size()} benchmark(s).")
+    }
+}
