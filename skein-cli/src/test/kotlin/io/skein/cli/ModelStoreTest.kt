@@ -9,7 +9,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ModelStoreTest {
+internal class ModelStoreTest {
 
     private val modelFile = createTempFile(prefix = "skein-model", suffix = ".txt")
 
@@ -27,12 +27,12 @@ class ModelStoreTest {
     }
 
     @Test
-    fun `save then load reproduces predictions (Naive Bayes)`() {
+    internal fun `save then load reproduces predictions (Naive Bayes)`() {
         assertRoundTrips(classifier = ClassifierKindEnum.NAIVE_BAYES)
     }
 
     @Test
-    fun `save then load reproduces predictions (logistic regression)`() {
+    internal fun `save then load reproduces predictions (logistic regression)`() {
         assertRoundTrips(classifier = ClassifierKindEnum.LOGISTIC_REGRESSION)
     }
 

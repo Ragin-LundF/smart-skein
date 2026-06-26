@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class LabelingSessionTest {
+internal class LabelingSessionTest {
 
     private val schema = Schema.define {
         text(name = "purpose")
@@ -20,7 +20,7 @@ class LabelingSessionTest {
     private val hashing = HashingConfig(key0 = 7L, key1 = 13L)
 
     @Test
-    fun `accepting suggestions labels every uncertain row and the engine learns them`() {
+    internal fun `accepting suggestions labels every uncertain row and the engine learns them`() {
         val rows = sampleRows()
         val unlabeled = rows.count { row -> (row["category"] as String).isEmpty() }
 
@@ -31,7 +31,7 @@ class LabelingSessionTest {
     }
 
     @Test
-    fun `quit stops immediately and labels nothing`() {
+    internal fun `quit stops immediately and labels nothing`() {
         val rows = sampleRows()
 
         val labeled = session(input = "q\n").run(rows = rows)
@@ -41,7 +41,7 @@ class LabelingSessionTest {
     }
 
     @Test
-    fun `skip leaves one row unlabeled while the rest are labeled`() {
+    internal fun `skip leaves one row unlabeled while the rest are labeled`() {
         val rows = sampleRows()
         val unlabeled = rows.count { row -> (row["category"] as String).isEmpty() }
 
@@ -52,7 +52,7 @@ class LabelingSessionTest {
     }
 
     @Test
-    fun `typed label overrides the suggestion`() {
+    internal fun `typed label overrides the suggestion`() {
         val rows = sampleRows()
 
         session(input = "groceries\n".repeat(n = 10)).run(rows = rows)
@@ -81,7 +81,7 @@ class LabelingSessionTest {
     }
 
     @Test
-    fun `sampling scan-limit still labels the whole pool when every pick is accepted`() {
+    internal fun `sampling scan-limit still labels the whole pool when every pick is accepted`() {
         val rows = sampleRows()
         val unlabeled = rows.count { row -> (row["category"] as String).isEmpty() }
 
@@ -92,7 +92,7 @@ class LabelingSessionTest {
     }
 
     @Test
-    fun `fails clearly when no rows are labeled to seed the model`() {
+    internal fun `fails clearly when no rows are labeled to seed the model`() {
         val rows = listOf(row(purpose = "a", category = ""), row(purpose = "b", category = ""))
 
         val error = assertFailsWith<IllegalStateException> { session(input = "q\n").run(rows = rows) }

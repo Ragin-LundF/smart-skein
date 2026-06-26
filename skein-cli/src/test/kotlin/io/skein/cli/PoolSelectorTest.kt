@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class PoolSelectorTest {
+internal class PoolSelectorTest {
 
     private val schema = Schema.define {
         text(name = "purpose")
@@ -37,7 +37,7 @@ class PoolSelectorTest {
     }
 
     @Test
-    fun `scores caches the feature vector and returns up to limit entries, most uncertain first`() {
+    internal fun `scores caches the feature vector and returns up to limit entries, most uncertain first`() {
         val selector = PoolSelector(
             engine = trainedEngine(),
             strategy = UncertaintyStrategyEnum.MARGIN,
@@ -57,7 +57,7 @@ class PoolSelectorTest {
     }
 
     @Test
-    fun `scan-limit bounds the number of entries scored per round`() {
+    internal fun `scan-limit bounds the number of entries scored per round`() {
         val selector = PoolSelector(
             engine = trainedEngine(),
             strategy = UncertaintyStrategyEnum.MARGIN,

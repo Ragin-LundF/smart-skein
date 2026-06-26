@@ -3,10 +3,10 @@ package io.skein.cli
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class CsvCodecTest {
+internal class CsvCodecTest {
 
     @Test
-    fun `parses quoted fields with embedded commas, quotes and newlines`() {
+    internal fun `parses quoted fields with embedded commas, quotes and newlines`() {
         val text = "a,b,c\n\"x,1\",\"say \"\"hi\"\"\",\"two\nlines\"\n"
 
         val rows = CsvCodec.parse(text = text)
@@ -16,7 +16,7 @@ class CsvCodecTest {
     }
 
     @Test
-    fun `format then parse round-trips fields needing escaping`() {
+    internal fun `format then parse round-trips fields needing escaping`() {
         val row = listOf("plain", "with,comma", "with\"quote", "with\nnewline")
 
         val parsed = CsvCodec.parse(text = CsvCodec.formatRow(row = row))
@@ -25,14 +25,14 @@ class CsvCodecTest {
     }
 
     @Test
-    fun `strips a leading UTF-8 BOM from the first header name`() {
+    internal fun `strips a leading UTF-8 BOM from the first header name`() {
         val rows = CsvCodec.parse(text = "\uFEFFa,b\n1,2\n")
 
         assertEquals(expected = listOf("a", "b"), actual = rows[0])
     }
 
     @Test
-    fun `CsvRecordSource maps header columns to record fields`() {
+    internal fun `CsvRecordSource maps header columns to record fields`() {
         val source = CsvRecordSource(text = "purpose,category\nrent payment,rent\nsalary,\n")
 
         assertEquals(expected = listOf("purpose", "category"), actual = source.header)
