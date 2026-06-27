@@ -5,13 +5,15 @@ import io.skein.classify.domain.Record
 import io.skein.classify.domain.Schema
 import kotlin.io.path.createTempFile
 import kotlin.io.path.deleteIfExists
+import kotlin.io.path.readText
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 internal class ModelStoreTest {
 
-    private val modelFile = createTempFile(prefix = "skein-model", suffix = ".txt")
+    private val modelFile = createTempFile(prefix = "skein-model", suffix = ".skein")
 
     private val schema = Schema.define {
         text(name = "purpose")
@@ -34,6 +36,26 @@ internal class ModelStoreTest {
     @Test
     internal fun `save then load reproduces predictions (logistic regression)`() {
         assertRoundTrips(classifier = ClassifierKindEnum.LOGISTIC_REGRESSION)
+    }
+
+    @Test
+    internal fun `ModelConverter toText produces human-readable skein-model header`() {
+        val engine = CliEngine.fresh(
+            schema = schema,
+            classifier = ClassifierKindEnum.NAIVE_BAYES,
+            hashingConfig = hashing,
+        )
+        train(engine = engine)
+        engine.save(path = modelFile)
+        val textFile = createTempFile(prefix = "skein-text", suffix = ".txt")
+        try {
+            ModelConverter.toText(src = modelFile, dst = textFile)
+            assertTrue(message = "text output must start with skein-model 1") {
+                textFile.readText().startsWith("skein-model 1")
+            }
+        } finally {
+            textFile.deleteIfExists()
+        }
     }
 
     private fun assertRoundTrips(classifier: ClassifierKindEnum) {
