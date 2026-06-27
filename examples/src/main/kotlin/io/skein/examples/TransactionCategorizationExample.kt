@@ -69,7 +69,7 @@ class TransactionCategorizationExample {
 
     private fun train() {
         engine.learnAll(
-            listOf(
+            records = listOf(
                 sample(purpose = "AIG-Life 67.89 Geico-Auto 120.00 insurance premium", category = "insurance"),
                 sample(purpose = "Allstate-Home 90.00 insurance premium", category = "insurance"),
                 sample(purpose = "insurance premium annual policy", category = "insurance"),

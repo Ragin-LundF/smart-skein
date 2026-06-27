@@ -14,15 +14,15 @@ import kotlin.math.min
  */
 class SymSpellIndex(words: Set<String>, private val maxEditDistance: Int) {
 
-    private val wordsByDeletionVariant: Map<String, Set<String>> = buildIndex(words)
+    private val wordsByDeletionVariant: Map<String, Set<String>> = buildIndex(words = words)
 
     /** Dictionary words within [maxEditDistance] edits of [query] (verified, not just candidates). */
     fun candidates(query: String): Set<String> {
         val matches = LinkedHashSet<String>()
-        for (variant in deletionVariants(query)) {
+        for (variant in deletionVariants(value = query)) {
             val words = wordsByDeletionVariant[variant] ?: emptySet()
             for (word in words) {
-                if (isWithinEditDistance(query, word, maxEditDistance)) {
+                if (isWithinEditDistance(left = query, right = word, limit = maxEditDistance)) {
                     matches.add(word)
                 }
             }
@@ -33,8 +33,8 @@ class SymSpellIndex(words: Set<String>, private val maxEditDistance: Int) {
     private fun buildIndex(words: Set<String>): Map<String, Set<String>> {
         val index = HashMap<String, MutableSet<String>>()
         for (word in words) {
-            for (variant in deletionVariants(word)) {
-                index.getOrPut(variant) { HashSet() }.add(word)
+            for (variant in deletionVariants(value = word)) {
+                index.getOrPut(key = variant) { HashSet() }.add(word)
             }
         }
         return index
@@ -45,11 +45,11 @@ class SymSpellIndex(words: Set<String>, private val maxEditDistance: Int) {
         val variants = HashSet<String>()
         variants.add(value)
         var frontier = setOf(value)
-        for (step in 0 until maxEditDistance) {
+        repeat(times = maxEditDistance) {
             val next = HashSet<String>()
             for (token in frontier) {
                 for (index in token.indices) {
-                    next.add(token.removeRange(index, index + 1))
+                    next.add(token.removeRange(startIndex = index, endIndex = index + 1))
                 }
             }
             variants.addAll(next)
@@ -68,10 +68,10 @@ class SymSpellIndex(words: Set<String>, private val maxEditDistance: Int) {
             for (j in 1..right.length) {
                 val substitutionCost = if (left[i - 1] == right[j - 1]) 0 else 1
                 current[j] = min(
-                    min(previous[j] + 1, current[j - 1] + 1),
-                    previous[j - 1] + substitutionCost,
+                    a = min(a = previous[j] + 1, b = current[j - 1] + 1),
+                    b = previous[j - 1] + substitutionCost,
                 )
-                rowMinimum = min(rowMinimum, current[j])
+                rowMinimum = min(a = rowMinimum, b = current[j])
             }
             if (rowMinimum > limit) {
                 return false

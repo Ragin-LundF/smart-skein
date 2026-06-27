@@ -43,7 +43,10 @@ class HashingVectorizer(
                 break
             }
             for (start in 0..text.length - size) {
-                accumulate(ngram = text.substring(start, start + size), accumulator = accumulator)
+                accumulate(
+                    ngram = text.substring(startIndex = start, endIndex = start + size),
+                    accumulator = accumulator,
+                )
             }
         }
     }
@@ -71,7 +74,11 @@ class HashingVectorizer(
     }
 
     private fun indexOf(ngram: String): Int {
-        val hash = SipHash.hash(data = ngram.toByteArray(Charsets.UTF_8), key0 = config.key0, key1 = config.key1)
+        val hash = SipHash.hash(
+            data = ngram.toByteArray(charset = Charsets.UTF_8),
+            key0 = config.key0,
+            key1 = config.key1,
+        )
         val bucket = (hash % config.numFeatures).toInt()
         return if (bucket < 0) bucket + config.numFeatures else bucket
     }

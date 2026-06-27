@@ -26,41 +26,41 @@ class BrokenWordRepairer(
     private var cachedVocabularySize: Int = -1
 
     fun repair(text: String): String {
-        val fragments = text.split(WHITESPACE).filter { fragment -> fragment.isNotEmpty() }
+        val fragments = text.split(regex = WHITESPACE).filter { fragment -> fragment.isNotEmpty() }
         if (fragments.isEmpty()) {
             return ""
         }
-        return resegment(fragments).joinToString(separator = " ")
+        return resegment(fragments = fragments).joinToString(separator = " ")
     }
 
     private fun resegment(fragments: List<String>): List<String> {
         val count = fragments.size
-        val bestScore = DoubleArray(count + 1) { Double.NEGATIVE_INFINITY }
-        val wordStart = IntArray(count + 1) { -1 }
+        val bestScore = DoubleArray(size = count + 1) { Double.NEGATIVE_INFINITY }
+        val wordStart = IntArray(size = count + 1) { -1 }
         bestScore[0] = 0.0
         for (end in 1..count) {
-            val earliestStart = maxOf(0, end - maxFragmentsPerWord)
+            val earliestStart = maxOf(a = 0, b = end - maxFragmentsPerWord)
             for (start in earliestStart until end) {
                 if (bestScore[start] == Double.NEGATIVE_INFINITY) {
                     continue
                 }
-                val candidate = concat(fragments, start, end)
-                val score = bestScore[start] + scoreOf(candidate, spanSize = end - start)
+                val candidate = concat(fragments = fragments, start = start, end = end)
+                val score = bestScore[start] + scoreOf(candidate = candidate, spanSize = end - start)
                 if (score > bestScore[end]) {
                     bestScore[end] = score
                     wordStart[end] = start
                 }
             }
         }
-        return reconstruct(fragments, wordStart, count)
+        return reconstruct(fragments = fragments, wordStart = wordStart, count = count)
     }
 
     private fun scoreOf(candidate: String, spanSize: Int): Double {
-        val frequency = frequencyModel.frequency(candidate)
+        val frequency = frequencyModel.frequency(word = candidate)
         if (frequency > 0) {
-            return KNOWN_WORD_REWARD + ln(frequency.toDouble())
+            return KNOWN_WORD_REWARD + ln(x = frequency.toDouble())
         }
-        if (candidate.length >= MIN_TYPO_LENGTH && nearKnown(candidate)) {
+        if (candidate.length >= MIN_TYPO_LENGTH && nearKnown(candidate = candidate)) {
             return NEAR_KNOWN_REWARD
         }
         // An unknown single fragment is kept as-is; merging fragments into a non-word is rejected.
@@ -68,7 +68,7 @@ class BrokenWordRepairer(
     }
 
     private fun nearKnown(candidate: String): Boolean {
-        return symSpellIndex().candidates(candidate).isNotEmpty()
+        return symSpellIndex().candidates(query = candidate).isNotEmpty()
     }
 
     /**
@@ -82,7 +82,7 @@ class BrokenWordRepairer(
         if (existing != null && known.size == cachedVocabularySize) {
             return existing
         }
-        val rebuilt = SymSpellIndex(known, maxEditDistance)
+        val rebuilt = SymSpellIndex(words = known, maxEditDistance = maxEditDistance)
         cachedIndex = rebuilt
         cachedVocabularySize = known.size
         return rebuilt
@@ -116,6 +116,6 @@ class BrokenWordRepairer(
         private const val NEAR_KNOWN_REWARD = 8.0
         private const val UNKNOWN_FRAGMENT_PENALTY = -1.0
         private const val UNKNOWN_MERGE_PENALTY = -1000.0
-        private val WHITESPACE = Regex("\\s+")
+        private val WHITESPACE = Regex(pattern = "\\s+")
     }
 }

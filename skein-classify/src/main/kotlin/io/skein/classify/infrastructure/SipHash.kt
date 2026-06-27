@@ -27,7 +27,7 @@ object SipHash {
         val end = data.size - (data.size % Long.SIZE_BYTES)
         var offset = 0
         while (offset < end) {
-            val block = littleEndianLong(data, offset)
+            val block = littleEndianLong(data = data, offset = offset)
             v3 = v3 xor block
             // SIPROUND, inlined (no per-round allocation, no lambda capture). v0..v3 mutate in place.
             for (round in 0 until COMPRESSION_ROUNDS) {

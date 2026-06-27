@@ -5,36 +5,36 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class SchemaTest {
+internal class SchemaTest {
 
     @Test
-    fun `builds a schema via the define DSL`() {
+    internal fun `builds a schema via the define DSL`() {
         val schema = Schema.define {
-            text("purpose")
-            categorical("counterparty")
-            identifier("iban")
-            label("category")
+            text(name = "purpose")
+            categorical(name = "counterparty")
+            identifier(name = "iban")
+            label(name = "category")
         }
         assertEquals(expected = "category", actual = schema.labelField.name)
-        assertTrue(schema.field("iban") is IdentifierField)
-        assertEquals(expected = SensitivityEnum.PII, actual = schema.field("iban")?.sensitivity)
+        assertTrue(actual = schema.field(name = "iban") is IdentifierField)
+        assertEquals(expected = SensitivityEnum.PII, actual = schema.field(name = "iban")?.sensitivity)
     }
 
     @Test
-    fun `rejects a schema without a label field`() {
+    internal fun `rejects a schema without a label field`() {
         assertFailsWith<IllegalArgumentException> {
             Schema.define {
-                text("purpose")
+                text(name = "purpose")
             }
         }
     }
 
     @Test
-    fun `rejects a schema with more than one label field`() {
+    internal fun `rejects a schema with more than one label field`() {
         assertFailsWith<IllegalArgumentException> {
             Schema.define {
-                label("a")
-                label("b")
+                label(name = "a")
+                label(name = "b")
             }
         }
     }

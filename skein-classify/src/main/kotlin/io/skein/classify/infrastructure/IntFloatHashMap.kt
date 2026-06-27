@@ -15,9 +15,9 @@ class IntFloatHashMap(initialCapacity: Int = DEFAULT_CAPACITY) {
     private var count: Int = 0
 
     init {
-        val capacity = tableSizeFor(initialCapacity)
-        keys = IntArray(capacity) { EMPTY }
-        values = FloatArray(capacity)
+        val capacity = tableSizeFor(requested = initialCapacity)
+        keys = IntArray(size = capacity) { EMPTY }
+        values = FloatArray(size = capacity)
         mask = capacity - 1
     }
 
@@ -28,9 +28,9 @@ class IntFloatHashMap(initialCapacity: Int = DEFAULT_CAPACITY) {
     /** Adds [delta] to the value stored under [key] (inserting `delta` when absent). */
     fun addTo(key: Int, delta: Float) {
         if ((count + 1) * LOAD_FACTOR_NUMERATOR >= keys.size * LOAD_FACTOR_DENOMINATOR) {
-            resize(keys.size * 2)
+            resize(requestedCapacity = keys.size * 2)
         }
-        val slot = slotForInsert(key)
+        val slot = slotForInsert(key = key)
         if (keys[slot] == EMPTY) {
             keys[slot] = key
             values[slot] = delta
@@ -42,13 +42,13 @@ class IntFloatHashMap(initialCapacity: Int = DEFAULT_CAPACITY) {
 
     /** Resets the map to empty for reuse, keeping the allocated backing arrays. */
     fun clear() {
-        keys.fill(EMPTY)
+        keys.fill(element = EMPTY)
         count = 0
     }
 
     /** The entries as parallel arrays, indices sorted ascending (the sparse-vector layout). */
     fun sortedKeysAndValues(): Pair<IntArray, FloatArray> {
-        val indices = IntArray(count)
+        val indices = IntArray(size = count)
         var position = 0
         for (slot in keys.indices) {
             if (keys[slot] != EMPTY) {
@@ -57,15 +57,15 @@ class IntFloatHashMap(initialCapacity: Int = DEFAULT_CAPACITY) {
             }
         }
         indices.sort()
-        val sortedValues = FloatArray(count)
+        val sortedValues = FloatArray(size = count)
         for (i in indices.indices) {
-            sortedValues[i] = valueOf(indices[i])
+            sortedValues[i] = valueOf(key = indices[i])
         }
         return indices to sortedValues
     }
 
     private fun slotForInsert(key: Int): Int {
-        var slot = spread(key) and mask
+        var slot = spread(key = key) and mask
         while (keys[slot] != EMPTY && keys[slot] != key) {
             slot = (slot + 1) and mask
         }
@@ -73,7 +73,7 @@ class IntFloatHashMap(initialCapacity: Int = DEFAULT_CAPACITY) {
     }
 
     private fun valueOf(key: Int): Float {
-        var slot = spread(key) and mask
+        var slot = spread(key = key) and mask
         while (keys[slot] != key) {
             slot = (slot + 1) and mask
         }
@@ -83,14 +83,14 @@ class IntFloatHashMap(initialCapacity: Int = DEFAULT_CAPACITY) {
     private fun resize(requestedCapacity: Int) {
         val oldKeys = keys
         val oldValues = values
-        val capacity = tableSizeFor(requestedCapacity)
-        keys = IntArray(capacity) { EMPTY }
-        values = FloatArray(capacity)
+        val capacity = tableSizeFor(requested = requestedCapacity)
+        keys = IntArray(size = capacity) { EMPTY }
+        values = FloatArray(size = capacity)
         mask = capacity - 1
         count = 0
         for (slot in oldKeys.indices) {
             if (oldKeys[slot] != EMPTY) {
-                addTo(oldKeys[slot], oldValues[slot])
+                addTo(key = oldKeys[slot], delta = oldValues[slot])
             }
         }
     }

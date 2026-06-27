@@ -29,12 +29,12 @@ internal class NaiveBayesSnapshot(
     }
 
     fun predict(features: FeatureVector): Prediction {
-        val effectiveVocabulary = vocabularySize.coerceAtLeast(1)
+        val effectiveVocabulary = vocabularySize.coerceAtLeast(minimumValue = 1)
         val logScores = HashMap<Label, Double>()
         for (label in labelDocumentCounts.keys) {
             logScores[label] = logScoreFor(label = label, features = features, vocabularySize = effectiveVocabulary)
         }
-        return PredictionFactory.fromLogScores(logScores)
+        return PredictionFactory.fromLogScores(logScores = logScores)
     }
 
     /** Returns a new snapshot with one observation added; [newVocabularySize] is the distinct-feature count. */
@@ -67,13 +67,13 @@ internal class NaiveBayesSnapshot(
     }
 
     private fun logScoreFor(label: Label, features: FeatureVector, vocabularySize: Int): Double {
-        val prior = ln(labelDocumentCounts.getValue(label).toDouble() / totalDocuments)
+        val prior = ln(x = labelDocumentCounts.getValue(key = label).toDouble() / totalDocuments)
         val sums = featureSumsByLabel[label] ?: emptyMap()
         val denominator = (featureMassByLabel[label] ?: 0.0) + smoothingAlpha * vocabularySize
         var score = prior
         for (position in features.indices.indices) {
             val count = sums[features.indices[position]] ?: 0.0
-            score += features.values[position].toDouble() * ln((count + smoothingAlpha) / denominator)
+            score += features.values[position].toDouble() * ln(x = (count + smoothingAlpha) / denominator)
         }
         return score
     }

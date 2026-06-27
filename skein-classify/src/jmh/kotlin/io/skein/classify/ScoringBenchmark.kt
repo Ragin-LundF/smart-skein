@@ -14,19 +14,31 @@ import org.openjdk.jmh.annotations.State
 @State(Scope.Benchmark)
 open class ScoringBenchmark {
 
-    private val vectorizer = HashingVectorizer(HashingConfig(key0 = 1L, key1 = 2L))
+    private val vectorizer = HashingVectorizer(config = HashingConfig(key0 = 1L, key1 = 2L))
     private val classifier = NaiveBayesClassifier()
-    private val sample: FeatureVector = vectorizer.vectorize("rent payment for the apartment")
+    private val sample: FeatureVector = vectorizer.vectorize(text = "rent payment for the apartment")
 
     init {
-        classifier.learn(vectorizer.vectorize("rent transfer landlord monthly"), Label("housing"))
-        classifier.learn(vectorizer.vectorize("apartment rent standing order"), Label("housing"))
-        classifier.learn(vectorizer.vectorize("salary october payout employer"), Label("income"))
-        classifier.learn(vectorizer.vectorize("monthly salary payment"), Label("income"))
+        classifier.learn(
+            features = vectorizer.vectorize(text = "rent transfer landlord monthly"),
+            label = Label(value = "housing"),
+        )
+        classifier.learn(
+            features = vectorizer.vectorize(text = "apartment rent standing order"),
+            label = Label(value = "housing"),
+        )
+        classifier.learn(
+            features = vectorizer.vectorize(text = "salary october payout employer"),
+            label = Label(value = "income"),
+        )
+        classifier.learn(
+            features = vectorizer.vectorize(text = "monthly salary payment"),
+            label = Label(value = "income"),
+        )
     }
 
     @Benchmark
     open fun classify(): Prediction {
-        return classifier.classify(sample)
+        return classifier.classify(features = sample)
     }
 }

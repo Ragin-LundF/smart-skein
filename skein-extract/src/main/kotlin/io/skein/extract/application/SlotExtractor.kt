@@ -19,32 +19,32 @@ class SlotExtractor(private val tokenizer: TypedTokenizer = TypedTokenizer()) {
 
     /** Tokenizes [text] then extracts. */
     fun extract(text: String, slots: List<SlotDefinition>): ExtractionResult {
-        return extract(tokenizer.tokenize(text), slots)
+        return extract(tokens = tokenizer.tokenize(text = text), slots = slots)
     }
 
     fun extract(tokens: List<Token>, slots: List<SlotDefinition>): ExtractionResult {
         val fields = ArrayList<ExtractedField>()
         for (slot in slots) {
             when (slot) {
-                is PositionalSlot -> extractPositional(slot, tokens, fields)
-                is KeyAnchoredSlot -> extractKeyAnchored(slot, tokens, fields)
-                is RepeatingGroupSlot -> extractRepeating(slot, tokens, fields)
+                is PositionalSlot -> extractPositional(slot = slot, tokens = tokens, fields = fields)
+                is KeyAnchoredSlot -> extractKeyAnchored(slot = slot, tokens = tokens, fields = fields)
+                is RepeatingGroupSlot -> extractRepeating(slot = slot, tokens = tokens, fields = fields)
             }
         }
-        return ExtractionResult(fields)
+        return ExtractionResult(fields = fields)
     }
 
     private fun extractPositional(slot: PositionalSlot, tokens: List<Token>, fields: MutableList<ExtractedField>) {
-        val token = tokens.getOrNull(slot.tokenIndex) ?: return
+        val token = tokens.getOrNull(index = slot.tokenIndex) ?: return
         fields.add(fieldOf(name = slot.name, token = token))
     }
 
     private fun extractKeyAnchored(slot: KeyAnchoredSlot, tokens: List<Token>, fields: MutableList<ExtractedField>) {
-        val anchorIndex = tokens.indexOfFirst { token -> matchesAnchor(token, slot.anchor) }
+        val anchorIndex = tokens.indexOfFirst { token -> matchesAnchor(token = token, anchor = slot.anchor) }
         if (anchorIndex < 0) {
             return
         }
-        val target = findTarget(tokens, anchorIndex, slot) ?: return
+        val target = findTarget(tokens = tokens, anchorIndex = anchorIndex, slot = slot) ?: return
         fields.add(fieldOf(name = slot.name, token = target))
     }
 
@@ -61,8 +61,8 @@ class SlotExtractor(private val tokenizer: TypedTokenizer = TypedTokenizer()) {
         var position = 0
         var groupIndex = 0
         while (position + span <= tokens.size) {
-            if (groupMatches(slot, tokens, position)) {
-                appendGroup(slot, tokens, position, groupIndex, fields)
+            if (groupMatches(slot = slot, tokens = tokens, position = position)) {
+                appendGroup(slot = slot, tokens = tokens, position = position, groupIndex = groupIndex, fields = fields)
                 groupIndex++
                 position += span
             } else {
@@ -85,12 +85,14 @@ class SlotExtractor(private val tokenizer: TypedTokenizer = TypedTokenizer()) {
         fields: MutableList<ExtractedField>,
     ) {
         slot.components.forEachIndexed { offset, component ->
-            fields.add(fieldOf(name = component.name, token = tokens[position + offset], groupIndex = groupIndex))
+            fields.add(
+                fieldOf(name = component.name, token = tokens[position + offset], groupIndex = groupIndex),
+            )
         }
     }
 
     private fun matchesAnchor(token: Token, anchor: String): Boolean {
-        return token.text.trim { character -> !character.isLetterOrDigit() }.equals(anchor, ignoreCase = true)
+        return token.text.trim { character -> !character.isLetterOrDigit() }.equals(other = anchor, ignoreCase = true)
     }
 
     private fun fieldOf(name: String, token: Token, groupIndex: Int? = null): ExtractedField {

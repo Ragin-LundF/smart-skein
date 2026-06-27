@@ -15,36 +15,36 @@ import kotlin.test.assertTrue
  * It is intentionally dependency-free (no architecture library) so it cannot break on toolchain
  * upgrades; imports in Kotlin are line-oriented, which is all this rule needs.
  */
-class LayeringArchitectureTest {
+internal class LayeringArchitectureTest {
 
     @Test
-    fun `domain packages depend on nothing outside the domain`() {
+    internal fun `domain packages depend on nothing outside the domain`() {
         val violations = violations(
             layerSuffix = ".domain",
             forbidden = listOf(".application.", ".spi.", ".infrastructure."),
         )
         assertTrue(
-            violations.isEmpty(),
+            actual = violations.isEmpty(),
             message = "domain must not depend on other layers:\n${violations.joinToString(separator = "\n")}",
         )
     }
 
     @Test
-    fun `spi ports depend only on the domain`() {
+    internal fun `spi ports depend only on the domain`() {
         val violations = violations(layerSuffix = ".spi", forbidden = listOf(".application.", ".infrastructure."))
         assertTrue(
-            violations.isEmpty(),
+            actual = violations.isEmpty(),
             message = "spi ports must depend only on the domain:\n${violations.joinToString(separator = "\n")}",
         )
     }
 
     @Test
-    fun `the scan actually inspects domain sources`() {
+    internal fun `the scan actually inspects domain sources`() {
         // Guard against a vacuous pass if source discovery ever breaks.
         val domainFiles = productionKotlinFiles()
-            .filter { file -> packageOf(file.readLines())?.endsWith(".domain") == true }
+            .filter { file -> packageOf(lines = file.readLines())?.endsWith(suffix = ".domain") == true }
         assertTrue(
-            domainFiles.size >= EXPECTED_MINIMUM_DOMAIN_FILES,
+            actual = domainFiles.size >= EXPECTED_MINIMUM_DOMAIN_FILES,
             message = "expected to find domain sources to check",
         )
     }
@@ -52,26 +52,29 @@ class LayeringArchitectureTest {
     private fun violations(layerSuffix: String, forbidden: List<String>): List<String> {
         return productionKotlinFiles().flatMap { file ->
             val lines = file.readLines()
-            val packageName = packageOf(lines)
-            if (packageName == null || !packageName.endsWith(layerSuffix)) {
+            val packageName = packageOf(lines = lines)
+            if (packageName == null || !packageName.endsWith(suffix = layerSuffix)) {
                 emptyList()
             } else {
-                forbiddenImports(lines, forbidden).map { import -> "${file.name} ($packageName) imports $import" }
+                forbiddenImports(lines = lines, forbidden = forbidden)
+                    .map { import -> "${file.name} ($packageName) imports $import" }
             }
         }
     }
 
     private fun packageOf(lines: List<String>): String? {
-        return lines.firstOrNull { line -> line.trimStart().startsWith("package ") }
-            ?.substringAfter("package ")
+        return lines.firstOrNull { line -> line.trimStart().startsWith(prefix = "package ") }
+            ?.substringAfter(delimiter = "package ")
             ?.trim()
     }
 
     private fun forbiddenImports(lines: List<String>, forbidden: List<String>): List<String> {
         return lines
-            .filter { line -> line.trimStart().startsWith("import ") }
-            .map { line -> line.substringAfter("import ").trim() }
-            .filter { import -> import.startsWith(ROOT_PACKAGE) && forbidden.any { layer -> import.contains(layer) } }
+            .filter { line -> line.trimStart().startsWith(prefix = "import ") }
+            .map { line -> line.substringAfter(delimiter = "import ").trim() }
+            .filter { import ->
+                import.startsWith(prefix = ROOT_PACKAGE) && forbidden.any { layer -> import.contains(other = layer) }
+            }
     }
 
     private fun productionKotlinFiles(): List<File> {
@@ -89,7 +92,7 @@ class LayeringArchitectureTest {
             }
             current = current.parentFile
         }
-        error("could not locate repository root (settings.gradle)")
+        error(message = "could not locate repository root (settings.gradle)")
     }
 
     private companion object {

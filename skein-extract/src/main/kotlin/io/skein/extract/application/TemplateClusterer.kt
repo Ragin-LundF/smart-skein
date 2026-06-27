@@ -15,8 +15,8 @@ class TemplateClusterer(private val tokenizer: TypedTokenizer = TypedTokenizer()
     fun cluster(texts: List<String>): List<TemplateCluster> {
         val membersBySignature = LinkedHashMap<PatternSignature, MutableList<String>>()
         for (text in texts) {
-            val signature = PatternSignature.of(tokenizer.tokenize(text))
-            membersBySignature.getOrPut(signature) { ArrayList() }.add(text)
+            val signature = PatternSignature.of(tokens = tokenizer.tokenize(text = text))
+            membersBySignature.getOrPut(key = signature) { ArrayList() }.add(text)
         }
         return membersBySignature.entries
             .map { entry -> TemplateCluster(signature = entry.key, members = entry.value.toList()) }

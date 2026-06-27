@@ -21,7 +21,7 @@ import kotlin.jvm.Volatile
 class NaiveBayesClassifier(private val smoothingAlpha: Double = DEFAULT_SMOOTHING_ALPHA) : Classifier {
 
     @Volatile
-    private var snapshot = NaiveBayesSnapshot.empty(smoothingAlpha)
+    private var snapshot = NaiveBayesSnapshot.empty(smoothingAlpha = smoothingAlpha)
     private val seenFeatures = HashSet<Int>()
     private val writeLock = Any()
 
@@ -41,7 +41,7 @@ class NaiveBayesClassifier(private val smoothingAlpha: Double = DEFAULT_SMOOTHIN
     override fun classify(features: FeatureVector): Prediction {
         val current = snapshot
         check(current.isTrained()) { "classifier has not been trained" }
-        return current.predict(features)
+        return current.predict(features = features)
     }
 
     override fun labels(): Set<Label> {
@@ -51,7 +51,7 @@ class NaiveBayesClassifier(private val smoothingAlpha: Double = DEFAULT_SMOOTHIN
     override fun forget() {
         synchronized(writeLock) {
             seenFeatures.clear()
-            snapshot = NaiveBayesSnapshot.empty(smoothingAlpha)
+            snapshot = NaiveBayesSnapshot.empty(smoothingAlpha = smoothingAlpha)
         }
     }
 

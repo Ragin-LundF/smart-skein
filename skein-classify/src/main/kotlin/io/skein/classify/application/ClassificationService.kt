@@ -54,7 +54,7 @@ class ClassificationService(
 
     /** Predicts the label of a record. */
     fun classify(record: Record): Prediction {
-        val features = vectorizer.vectorize(mapper.map(record = record).featureText)
+        val features = vectorizer.vectorize(text = mapper.map(record = record).featureText)
         return classifier.classify(features = features)
     }
 
@@ -74,11 +74,15 @@ class ClassificationService(
      * stored order, which helps SGD convergence by decorrelating consecutive updates.
      */
     fun retrain(epochs: Int = 1, seed: Long? = null) {
-        require(epochs >= 1) { "epochs must be at least 1" }
+        require(value = epochs >= 1) { "epochs must be at least 1" }
         classifier.forget()
         val observations = featureStore.all()
-        repeat(epochs) { epoch ->
-            val ordered = if (seed == null) observations else observations.shuffled(Random(seed + epoch))
+        repeat(times = epochs) { epoch ->
+            val ordered = if (seed == null) {
+                observations
+            } else {
+                observations.shuffled(random = Random(seed = seed + epoch))
+            }
             ordered.forEach { observation ->
                 classifier.learn(features = observation.features, label = observation.label)
             }

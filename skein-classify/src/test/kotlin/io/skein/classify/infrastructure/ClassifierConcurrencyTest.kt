@@ -9,33 +9,39 @@ import kotlin.concurrent.thread
 import kotlin.test.Test
 import kotlin.test.assertNull
 
-class ClassifierConcurrencyTest {
+internal class ClassifierConcurrencyTest {
 
-    private val vectorizer = HashingVectorizer(HashingConfig(key0 = 1L, key1 = 2L))
-    private val sample = vectorizer.vectorize("rent payment for the apartment")
+    private val vectorizer = HashingVectorizer(config = HashingConfig(key0 = 1L, key1 = 2L))
+    private val sample = vectorizer.vectorize(text = "rent payment for the apartment")
 
     private fun classifyWhileLearning(classifier: Classifier) {
-        classifier.learn(vectorizer.vectorize("rent transfer landlord"), Label("housing"))
+        classifier.learn(
+            features = vectorizer.vectorize(text = "rent transfer landlord"),
+            label = Label(value = "housing"),
+        )
         val failure = AtomicReference<Throwable?>()
         val reader = thread {
             runCatching {
-                repeat(2_000) { classifier.classify(sample) }
+                repeat(times = 2_000) { classifier.classify(features = sample) }
             }.onFailure { error -> failure.set(error) }
         }
-        repeat(2_000) { index ->
-            classifier.learn(vectorizer.vectorize("salary payout employer $index"), Label("income"))
+        repeat(times = 2_000) { index ->
+            classifier.learn(
+                features = vectorizer.vectorize(text = "salary payout employer $index"),
+                label = Label(value = "income"),
+            )
         }
         reader.join()
-        assertNull(failure.get(), message = "lock-free classify must not fail during concurrent training")
+        assertNull(actual = failure.get(), message = "lock-free classify must not fail during concurrent training")
     }
 
     @Test
-    fun `naive bayes classify is safe during concurrent training`() {
-        classifyWhileLearning(NaiveBayesClassifier())
+    internal fun `naive bayes classify is safe during concurrent training`() {
+        classifyWhileLearning(classifier = NaiveBayesClassifier())
     }
 
     @Test
-    fun `logistic regression classify is safe during concurrent training`() {
-        classifyWhileLearning(LogisticRegressionSgdClassifier())
+    internal fun `logistic regression classify is safe during concurrent training`() {
+        classifyWhileLearning(classifier = LogisticRegressionSgdClassifier())
     }
 }

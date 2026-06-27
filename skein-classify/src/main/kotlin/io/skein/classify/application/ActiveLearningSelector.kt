@@ -19,23 +19,23 @@ class ActiveLearningSelector(private val service: ClassificationService) {
         limit: Int,
         strategy: UncertaintyStrategyEnum = UncertaintyStrategyEnum.MARGIN,
     ): List<ReviewCandidate> {
-        require(limit >= 0) { "limit must not be negative" }
+        require(value = limit >= 0) { "limit must not be negative" }
         return candidates
-            .map { record -> toCandidate(record) }
-            .sortedByDescending { candidate -> uncertaintyOf(candidate.prediction, strategy) }
-            .take(limit)
+            .map { record -> toCandidate(record = record) }
+            .sortedByDescending { candidate -> uncertaintyOf(prediction = candidate.prediction, strategy = strategy) }
+            .take(n = limit)
     }
 
     private fun toCandidate(record: Record): ReviewCandidate {
-        val prediction = service.classify(record)
-        return ReviewCandidate(record = record, prediction = prediction, margin = marginOf(prediction))
+        val prediction = service.classify(record = record)
+        return ReviewCandidate(record = record, prediction = prediction, margin = marginOf(prediction = prediction))
     }
 
     private fun uncertaintyOf(prediction: Prediction, strategy: UncertaintyStrategyEnum): Double {
         return when (strategy) {
-            UncertaintyStrategyEnum.MARGIN -> -marginOf(prediction)
+            UncertaintyStrategyEnum.MARGIN -> -marginOf(prediction = prediction)
             UncertaintyStrategyEnum.LEAST_CONFIDENCE -> 1.0 - prediction.confidence
-            UncertaintyStrategyEnum.ENTROPY -> entropyOf(prediction)
+            UncertaintyStrategyEnum.ENTROPY -> entropyOf(prediction = prediction)
         }
     }
 
@@ -52,7 +52,7 @@ class ActiveLearningSelector(private val service: ClassificationService) {
         for (scored in prediction.alternatives) {
             val probability = scored.probability
             if (probability > 0.0) {
-                entropy -= probability * ln(probability)
+                entropy -= probability * ln(x = probability)
             }
         }
         return entropy

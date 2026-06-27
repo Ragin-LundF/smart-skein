@@ -18,7 +18,7 @@ value class PatternSignature(val types: List<TokenTypeEnum>) {
     companion object {
         /** Derives the signature from already-tokenized input, preserving order. */
         fun of(tokens: List<Token>): PatternSignature {
-            return PatternSignature(tokens.map { token -> token.type })
+            return PatternSignature(types = tokens.map { token -> token.type })
         }
     }
 }

@@ -66,9 +66,9 @@ class FrequencyModel(private val minKeepFrequency: Int = DEFAULT_MIN_KEEP_FREQUE
         /** Reconstructs a model from [serialize] output. */
         fun deserialize(serialized: String): FrequencyModel {
             val lines = serialized.lineSequence().filter { line -> line.isNotBlank() }.toList()
-            require(lines.isNotEmpty()) { "serialized frequency model is empty" }
+            require(value = lines.isNotEmpty()) { "serialized frequency model is empty" }
             val model = FrequencyModel(minKeepFrequency = lines.first().trim().toInt())
-            for (line in lines.drop(1)) {
+            for (line in lines.drop(n = 1)) {
                 val parts = line.split('\t', limit = 2)
                 model.counts[parts[1]] = parts[0].trim().toInt()
             }

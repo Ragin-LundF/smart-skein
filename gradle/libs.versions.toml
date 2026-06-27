@@ -1,5 +1,6 @@
 [versions]
 kotlin = "2.3.21"
+kotlinx-serialization = "1.11.0"
 junit = "6.1.0"
 postgresql = "42.7.11"
 tomcat-jdbc = "11.0.23"
@@ -7,6 +8,9 @@ testcontainers = "2.0.5"
 liquibase = "5.0.3"
 
 [libraries]
+# kotlinx serialization
+kotlinx-serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "kotlinx-serialization" }
+
 # Kotlin test libraries
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
@@ -20,6 +24,7 @@ testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgr
 testcontainers-junit = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
 
 [plugins]
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 jreleaser = { id = "org.jreleaser", version = "1.24.0" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-dokka = { id = "org.jetbrains.dokka", version = "2.2.0" }

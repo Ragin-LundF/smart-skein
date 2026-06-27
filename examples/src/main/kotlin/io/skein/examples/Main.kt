@@ -9,7 +9,7 @@ fun main() {
         "salary november payout",
     )
     transactions.forEach { purpose ->
-        val result = example.process(purpose)
+        val result = example.process(purpose = purpose)
         println("purpose : $purpose")
         println("  category   : ${result.category.value} (confidence ${"%.2f".format(result.confidence)})")
         if (result.extracted.fields.isEmpty()) {

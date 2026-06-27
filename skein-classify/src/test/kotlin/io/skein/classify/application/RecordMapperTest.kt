@@ -8,36 +8,38 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class RecordMapperTest {
+internal class RecordMapperTest {
 
     private val schema = Schema.define {
-        text("purpose")
-        numeric("amount")
-        identifier("iban")
-        label("category")
+        text(name = "purpose")
+        numeric(name = "amount")
+        identifier(name = "iban")
+        label(name = "category")
     }
-    private val mapper = RecordMapper(schema)
+    private val mapper = RecordMapper(schema = schema)
 
     @Test
-    fun `concatenates feature-eligible fields and extracts the label`() {
+    internal fun `concatenates feature-eligible fields and extracts the label`() {
         val mapped = mapper.map(
-            Record(mapOf("purpose" to "Rent", "amount" to "1200", "iban" to "DE123", "category" to "housing")),
+            record = Record(
+                values = mapOf("purpose" to "Rent", "amount" to "1200", "iban" to "DE123", "category" to "housing"),
+            ),
         )
         assertEquals(expected = "Rent 1200", actual = mapped.featureText)
-        assertEquals(expected = Label("housing"), actual = mapped.label)
+        assertEquals(expected = Label(value = "housing"), actual = mapped.label)
     }
 
     @Test
-    fun `excludes PII identifier fields from feature text`() {
+    internal fun `excludes PII identifier fields from feature text`() {
         val mapped = mapper.map(
-            Record(mapOf("purpose" to "rent", "iban" to "DE99999999", "category" to "housing")),
+            record = Record(values = mapOf("purpose" to "rent", "iban" to "DE99999999", "category" to "housing")),
         )
-        assertTrue("DE99999999" !in mapped.featureText, message = "identifier (PII) must not enter features")
+        assertTrue(actual = "DE99999999" !in mapped.featureText, message = "identifier (PII) must not enter features")
     }
 
     @Test
-    fun `returns a null label when the label value is blank`() {
-        val mapped = mapper.map(Record(mapOf("purpose" to "rent", "category" to "  ")))
-        assertNull(mapped.label)
+    internal fun `returns a null label when the label value is blank`() {
+        val mapped = mapper.map(record = Record(values = mapOf("purpose" to "rent", "category" to "  ")))
+        assertNull(actual = mapped.label)
     }
 }

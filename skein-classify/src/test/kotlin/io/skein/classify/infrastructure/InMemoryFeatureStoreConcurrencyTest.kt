@@ -7,19 +7,19 @@ import kotlin.concurrent.thread
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class InMemoryFeatureStoreConcurrencyTest {
+internal class InMemoryFeatureStoreConcurrencyTest {
 
     @Test
-    fun `concurrent adds from many threads keep every observation`() {
+    internal fun `concurrent adds from many threads keep every observation`() {
         val store = InMemoryFeatureStore()
         val threadCount = 8
         val perThread = 500
         val observation = LabeledFeatures(
-            label = Label("x"),
+            label = Label(value = "x"),
             features = FeatureVector(indices = intArrayOf(1), values = floatArrayOf(1.0f)),
         )
         val workers = (0 until threadCount).map {
-            thread { repeat(perThread) { store.add(observation) } }
+            thread { repeat(times = perThread) { store.add(observation = observation) } }
         }
         workers.forEach { it.join() }
         assertEquals(expected = threadCount * perThread, actual = store.size())

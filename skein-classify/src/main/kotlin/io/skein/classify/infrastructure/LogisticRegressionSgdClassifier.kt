@@ -41,13 +41,13 @@ class LogisticRegressionSgdClassifier(
         synchronized(writeLock) {
             ensureLabel(label)
             val learningRate = initialLearningRate / (1.0 + decayRate * step)
-            val probabilities = probabilities(features)
+            val probabilities = probabilities(features = features)
             for (candidate in weightsByLabel.keys) {
                 val indicator = if (candidate == label) 1.0 else 0.0
                 applyGradient(
                     label = candidate,
                     features = features,
-                    error = probabilities.getValue(candidate) - indicator,
+                    error = probabilities.getValue(key = candidate) - indicator,
                     learningRate = learningRate,
                 )
             }
@@ -59,7 +59,7 @@ class LogisticRegressionSgdClassifier(
     override fun classify(features: FeatureVector): Prediction {
         val current = snapshot
         check(current.isTrained()) { "classifier has not been trained" }
-        return current.predict(features)
+        return current.predict(features = features)
     }
 
     override fun labels(): Set<Label> {
@@ -76,7 +76,7 @@ class LogisticRegressionSgdClassifier(
     }
 
     private fun ensureLabel(label: Label) {
-        weightsByLabel.getOrPut(label) { HashMap() }
+        weightsByLabel.getOrPut(key = label) { HashMap() }
         biasByLabel.putIfAbsent(label, 0.0)
     }
 
@@ -85,13 +85,13 @@ class LogisticRegressionSgdClassifier(
         for (label in weightsByLabel.keys) {
             logits[label] = scoreFor(label = label, features = features)
         }
-        return PredictionFactory.fromLogScores(logits)
+        return PredictionFactory.fromLogScores(logScores = logits)
             .alternatives
             .associate { scored -> scored.label to scored.probability }
     }
 
     private fun scoreFor(label: Label, features: FeatureVector): Double {
-        val weights = weightsByLabel.getValue(label)
+        val weights = weightsByLabel.getValue(key = label)
         var score = biasByLabel[label] ?: 0.0
         for (position in features.indices.indices) {
             score += (weights[features.indices[position]] ?: 0.0) * features.values[position].toDouble()
@@ -100,7 +100,7 @@ class LogisticRegressionSgdClassifier(
     }
 
     private fun applyGradient(label: Label, features: FeatureVector, error: Double, learningRate: Double) {
-        val weights = weightsByLabel.getValue(label)
+        val weights = weightsByLabel.getValue(key = label)
         for (position in features.indices.indices) {
             val index = features.indices[position]
             val current = weights[index] ?: 0.0
