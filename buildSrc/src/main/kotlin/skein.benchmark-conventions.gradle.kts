@@ -35,7 +35,7 @@ tasks.register("benchmarkGate") {
         // CALIBRATION KNOBS: deliberately well below observed performance so the gate catches
         // catastrophic regressions (e.g. an accidental O(n^2)) without failing on CI variance.
         @Suppress("UNCHECKED_CAST")
-        val thresholds = (extra.takeIf { it.has("benchmarkThresholds") }
+        val thresholds = (project.extra.takeIf { it.has("benchmarkThresholds") }
             ?.get("benchmarkThresholds") as Map<String, Double>?) ?: emptyMap()
         @Suppress("UNCHECKED_CAST")
         val results = JsonSlurper().parse(resultsFile) as List<Map<String, Any>>
