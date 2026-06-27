@@ -75,7 +75,21 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew publish -Pversion=${{ steps.version.outputs.version }} --no-daemon --stacktrace
 
+      - name: Check Maven Central credentials
+        id: maven-central-creds
+        env:
+          MAVENCENTRAL_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
+          MAVENCENTRAL_PASSWORD: ${{ secrets.MAVENCENTRAL_PASSWORD }}
+        run: |
+          if [ -n "$MAVENCENTRAL_USERNAME" ] && [ -n "$MAVENCENTRAL_PASSWORD" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Secrets MAVENCENTRAL_USERNAME and/or MAVENCENTRAL_PASSWORD are not configured. Skipping Maven Central deployment. Add them under Settings → Secrets and variables → Actions."
+          fi
+
       - name: Deploy to Maven Central (JReleaser)
+        if: steps.maven-central-creds.outputs.configured == 'true'
         env:
           JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
           JRELEASER_MAVENCENTRAL_SONATYPE_PASSWORD: ${{ secrets.MAVENCENTRAL_PASSWORD }}
