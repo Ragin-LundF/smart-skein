@@ -4,10 +4,10 @@ import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.Label
 import io.skein.classify.domain.LabeledFeatures
 import io.skein.store.postgres.config.JdbcConnectionConfig
-import org.testcontainers.containers.PostgreSQLContainer
+import javax.sql.DataSource
+import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
-import javax.sql.DataSource
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -81,7 +81,7 @@ internal class PostgresFeatureStoreIntegrationTest {
 
     @Test
     internal fun `encrypted store round-trips while storing ciphertext at rest`() {
-        val key = ByteArray(32) { index -> index.toByte() }
+        val key = ByteArray(size = 32) { index -> index.toByte() }
         val encryptedStore = PostgresFeatureStore(
             dataSource = dataSource(),
             encryption = AesGcmEncryption(key = key),
@@ -93,7 +93,10 @@ internal class PostgresFeatureStoreIntegrationTest {
 
         // Raw bytes on disk are NOT the plaintext codec output.
         val plaintext = FeatureVectorCodec().encode(vector = observation("secret", 7, 8, 9).features)
-        assertFalse(rawStoredBytes().contentEquals(other = plaintext), message = "stored blob must be encrypted")
+        assertFalse(
+            actual = rawStoredBytes().contentEquals(other = plaintext),
+            message = "stored blob must be encrypted"
+        )
     }
 
     private fun rawStoredBytes(): ByteArray {
@@ -110,6 +113,6 @@ internal class PostgresFeatureStoreIntegrationTest {
     companion object {
         @Container
         @JvmStatic
-        val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16-alpine")
+        val postgres: PostgreSQLContainer = PostgreSQLContainer("postgres:18")
     }
 }
