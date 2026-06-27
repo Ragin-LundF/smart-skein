@@ -5,11 +5,11 @@ name: Release
 # publishes signed artifacts to Maven Central (via JReleaser) and to GitHub Packages.
 #
 # Required repository secrets:
-#   GPG_PUBLIC_KEY          base64-encoded ASCII-armored public key  (-> ragin_public.pgp)
-#   GPG_SECRET_KEY          base64-encoded ASCII-armored secret key  (-> ragin_secret.pgp)
+#   GPG_RAGIN_PUBLIC        ASCII-armored GPG public key  (-> ragin_public.pgp)
+#   GPG_RAGIN_SECRET        ASCII-armored GPG secret key  (-> ragin_secret.pgp)
 #   GPG_PASSPHRASE          passphrase for the secret key
-#   MAVENCENTRAL_USERNAME   Sonatype Central Portal token username
-#   MAVENCENTRAL_PASSWORD   Sonatype Central Portal token password
+#   SONATYPE_USERNAME       Sonatype Central Portal token username
+#   SONATYPE_PASSWORD       Sonatype Central Portal token password
 # GITHUB_TOKEN is provided automatically and is used for GitHub Packages.
 
 on:
@@ -61,10 +61,10 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "Releasing version ${version}"
 
-      - name: Materialize GPG keys
+      - name: Decode GPG for Maven Central
         run: |
-          echo "${{ secrets.GPG_PUBLIC_KEY }}" | base64 --decode > "${GITHUB_WORKSPACE}/ragin_public.pgp"
-          echo "${{ secrets.GPG_SECRET_KEY }}" | base64 --decode > "${GITHUB_WORKSPACE}/ragin_secret.pgp"
+          echo "${{ secrets.GPG_RAGIN_PUBLIC }}" > ragin_public.pgp
+          echo "${{ secrets.GPG_RAGIN_SECRET }}" > ragin_secret.pgp
 
       - name: Build and test
         run: ./gradlew build -Pversion=${{ steps.version.outputs.version }} --no-daemon --stacktrace
@@ -78,23 +78,23 @@ jobs:
       - name: Check Maven Central credentials
         id: maven-central-creds
         env:
-          MAVENCENTRAL_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
-          MAVENCENTRAL_PASSWORD: ${{ secrets.MAVENCENTRAL_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
         run: |
-          if [ -n "$MAVENCENTRAL_USERNAME" ] && [ -n "$MAVENCENTRAL_PASSWORD" ]; then
+          if [ -n "$SONATYPE_USERNAME" ] && [ -n "$SONATYPE_PASSWORD" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Secrets MAVENCENTRAL_USERNAME and/or MAVENCENTRAL_PASSWORD are not configured. Skipping Maven Central deployment. Add them under Settings → Secrets and variables → Actions."
+            echo "::warning::Secrets SONATYPE_USERNAME and/or SONATYPE_PASSWORD are not configured. Skipping Maven Central deployment. Add them under Settings → Secrets and variables → Actions."
           fi
 
       - name: Deploy to Maven Central (JReleaser)
         if: steps.maven-central-creds.outputs.configured == 'true'
         env:
-          JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME: ${{ secrets.MAVENCENTRAL_USERNAME }}
-          JRELEASER_MAVENCENTRAL_SONATYPE_PASSWORD: ${{ secrets.MAVENCENTRAL_PASSWORD }}
+          JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          JRELEASER_MAVENCENTRAL_SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew jreleaserDeploy -Pversion=${{ steps.version.outputs.version }} --no-daemon --stacktrace
 
       - name: Upload JReleaser logs
