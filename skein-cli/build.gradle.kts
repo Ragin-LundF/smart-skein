@@ -21,3 +21,7 @@ dependencies {
 application {
     mainClass = "io.skein.cli.MainKt"
 }
+
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
+}

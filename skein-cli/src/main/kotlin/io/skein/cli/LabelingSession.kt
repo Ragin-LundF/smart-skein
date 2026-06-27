@@ -42,7 +42,9 @@ class LabelingSession(
     /** Runs the loop over [rows] (mutated in place). Returns how many rows the human labeled. */
     fun run(rows: List<MutableMap<String, Any?>>): Int {
         val labeled = rows.filter { row -> hasLabel(row = row) }
-        trainOn(labeled = labeled)
+        if (!engine.isTrained()) {
+            trainOn(labeled = labeled)
+        }
         val pending = rows.asSequence()
             .filter { row -> !hasLabel(row = row) }
             .mapTo(destination = ArrayList()) { row -> PoolEntry(row = row) }
