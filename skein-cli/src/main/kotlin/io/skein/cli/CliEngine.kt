@@ -1,7 +1,10 @@
 package io.skein.cli
 
 import io.skein.classify.application.ClassificationService
+import io.skein.classify.application.ClassifierKindEnum
 import io.skein.classify.application.HashingVectorizer
+import io.skein.classify.application.LoadedModel
+import io.skein.classify.application.ModelStore
 import io.skein.classify.application.RecordMapper
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.HashingConfig

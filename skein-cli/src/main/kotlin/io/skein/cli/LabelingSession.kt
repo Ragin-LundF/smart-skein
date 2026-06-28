@@ -1,5 +1,6 @@
 package io.skein.cli
 
+import io.skein.classify.application.ClassifierKindEnum
 import io.skein.classify.domain.Label
 import io.skein.classify.domain.Prediction
 import io.skein.classify.domain.Record

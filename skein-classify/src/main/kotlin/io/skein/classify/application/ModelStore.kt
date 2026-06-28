@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalSerializationApi::class)
 
-package io.skein.cli
+package io.skein.classify.application
 
 import io.skein.classify.domain.CategoricalField
 import io.skein.classify.domain.FeatureVector
@@ -28,7 +28,6 @@ import kotlin.io.path.outputStream
 private val MAGIC = byteArrayOf(0x53, 0x4B, 0x45, 0x49) // 'SKEI'
 private const val VERSION: Byte = 0x01
 
-// Field type codes stored in FieldDto.type
 private const val FIELD_TEXT = 0
 private const val FIELD_CATEGORICAL = 1
 private const val FIELD_NUMERIC = 2

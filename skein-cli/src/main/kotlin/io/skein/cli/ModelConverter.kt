@@ -1,5 +1,7 @@
 package io.skein.cli
 
+import io.skein.classify.application.LoadedModel
+import io.skein.classify.application.ModelStore
 import io.skein.classify.domain.CategoricalField
 import io.skein.classify.domain.FieldSpec
 import io.skein.classify.domain.IdentifierField
