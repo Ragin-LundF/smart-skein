@@ -28,6 +28,10 @@ class HashingVectorizer(
     // 256 bytes covers word n-grams up to ~40 chars without reallocation.
     private val encBuf = ThreadLocal.withInitial { ByteArray(256) }
 
+    // Reusable word-boundary buffer: interleaved (start, end) pairs for up to 128 words per text.
+    // Normalized text (single-space-separated, trimmed) rarely exceeds ~30 words in financial records.
+    private val wordBounds = ThreadLocal.withInitial { IntArray(256) }
+
     fun vectorize(text: String): FeatureVector {
         val normalized = normalizer.normalize(raw = text)
         val accumulator = scratch.get()
@@ -55,19 +59,40 @@ class HashingVectorizer(
     }
 
     private fun addWordNgrams(text: String, accumulator: IntFloatHashMap, buf: ByteArray) {
-        val words = text.split(regex = WHITESPACE).filter { word -> word.isNotEmpty() }
-        if (words.isEmpty()) {
+        val bounds = wordBounds.get()
+        var wordCount = 0
+        var wordStart = -1
+        for (i in text.indices) {
+            if (text[i] == ' ') {
+                if (wordStart >= 0) {
+                    bounds[wordCount * 2] = wordStart
+                    bounds[wordCount * 2 + 1] = i
+                    wordCount++
+                    wordStart = -1
+                }
+            } else if (wordStart < 0) {
+                wordStart = i
+            }
+        }
+        if (wordStart >= 0) {
+            bounds[wordCount * 2] = wordStart
+            bounds[wordCount * 2 + 1] = text.length
+            wordCount++
+        }
+        if (wordCount == 0) {
             return
         }
         for (size in config.wordNgramMin..config.wordNgramMax) {
-            if (size > words.size) {
+            if (size > wordCount) {
                 break
             }
-            for (start in 0..words.size - size) {
+            for (start in 0..wordCount - size) {
                 var pos = 0
                 for (wi in start until start + size) {
                     if (wi > start) buf[pos++] = ' '.code.toByte()
-                    pos += encodeUtf8(text = words[wi], start = 0, end = words[wi].length, buf = buf, offset = pos)
+                    val wStart = bounds[wi * 2]
+                    val wEnd = bounds[wi * 2 + 1]
+                    pos += encodeUtf8(text = text, start = wStart, end = wEnd, buf = buf, offset = pos)
                 }
                 accumulator.addTo(key = bucketOf(buf = buf, length = pos), delta = 1.0f)
             }
@@ -107,7 +132,4 @@ class HashingVectorizer(
         return pos - offset
     }
 
-    private companion object {
-        val WHITESPACE = Regex(pattern = "\\s+")
-    }
 }

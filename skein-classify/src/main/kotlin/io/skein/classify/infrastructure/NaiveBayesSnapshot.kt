@@ -20,6 +20,18 @@ internal class NaiveBayesSnapshot(
     private val smoothingAlpha: Double,
 ) {
 
+    private val featureLookupByLabel: Map<Label, IntDoubleHashMap>
+
+    init {
+        val lookupMap = HashMap<Label, IntDoubleHashMap>(featureSumsByLabel.size)
+        for ((label, sums) in featureSumsByLabel) {
+            val lookup = IntDoubleHashMap(initialCapacity = sums.size * 2)
+            for ((k, v) in sums) lookup.put(key = k, value = v)
+            lookupMap[label] = lookup
+        }
+        featureLookupByLabel = lookupMap
+    }
+
     fun isTrained(): Boolean {
         return totalDocuments > 0L
     }
@@ -68,11 +80,11 @@ internal class NaiveBayesSnapshot(
 
     private fun logScoreFor(label: Label, features: FeatureVector, vocabularySize: Int): Double {
         val prior = ln(x = labelDocumentCounts.getValue(key = label).toDouble() / totalDocuments)
-        val sums = featureSumsByLabel[label] ?: emptyMap()
+        val lookup = featureLookupByLabel[label]
         val denominator = (featureMassByLabel[label] ?: 0.0) + smoothingAlpha * vocabularySize
         var score = prior
         for (position in features.indices.indices) {
-            val count = sums[features.indices[position]] ?: 0.0
+            val count = lookup?.get(key = features.indices[position]) ?: 0.0
             score += features.values[position].toDouble() * ln(x = (count + smoothingAlpha) / denominator)
         }
         return score

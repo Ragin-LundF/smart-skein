@@ -14,6 +14,18 @@ internal class LogisticRegressionSnapshot(
     private val biasByLabel: Map<Label, Double>,
 ) {
 
+    private val weightLookupByLabel: Map<Label, IntDoubleHashMap>
+
+    init {
+        val lookupMap = HashMap<Label, IntDoubleHashMap>(weightsByLabel.size)
+        for ((label, weights) in weightsByLabel) {
+            val lookup = IntDoubleHashMap(initialCapacity = weights.size * 2)
+            for ((k, v) in weights) lookup.put(key = k, value = v)
+            lookupMap[label] = lookup
+        }
+        weightLookupByLabel = lookupMap
+    }
+
     fun isTrained(): Boolean {
         return weightsByLabel.isNotEmpty()
     }
@@ -31,10 +43,11 @@ internal class LogisticRegressionSnapshot(
     }
 
     private fun scoreFor(label: Label, features: FeatureVector): Double {
-        val weights = weightsByLabel.getValue(key = label)
+        val lookup = weightLookupByLabel[label]
         var score = biasByLabel[label] ?: 0.0
         for (position in features.indices.indices) {
-            score += (weights[features.indices[position]] ?: 0.0) * features.values[position].toDouble()
+            val w = lookup?.get(key = features.indices[position]) ?: 0.0
+            if (w != 0.0) score += w * features.values[position].toDouble()
         }
         return score
     }

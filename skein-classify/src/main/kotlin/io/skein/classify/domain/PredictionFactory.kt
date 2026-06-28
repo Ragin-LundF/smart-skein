@@ -12,12 +12,19 @@ object PredictionFactory {
     fun fromLogScores(logScores: Map<Label, Double>): Prediction {
         require(value = logScores.isNotEmpty()) { "cannot build a prediction without scores" }
         val maxLog = logScores.values.max()
-        val weights = logScores.mapValues { entry -> exp(x = entry.value - maxLog) }
-        val total = weights.values.sum()
-        val ranked = weights.entries
-            .map { entry -> ScoredLabel(label = entry.key, probability = entry.value / total) }
-            .sortedByDescending { scored -> scored.probability }
-        val top = ranked.first()
-        return Prediction(label = top.label, confidence = top.probability, alternatives = ranked)
+        val alternatives = ArrayList<ScoredLabel>(logScores.size)
+        var total = 0.0
+        for ((label, score) in logScores) {
+            val w = exp(x = score - maxLog)
+            alternatives.add(element = ScoredLabel(label = label, probability = w))
+            total += w
+        }
+        for (i in alternatives.indices) {
+            val s = alternatives[i]
+            alternatives[i] = s.copy(probability = s.probability / total)
+        }
+        alternatives.sortByDescending { s -> s.probability }
+        val top = alternatives.first()
+        return Prediction(label = top.label, confidence = top.probability, alternatives = alternatives)
     }
 }
