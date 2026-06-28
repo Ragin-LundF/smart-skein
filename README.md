@@ -1,6 +1,7 @@
 # Skein
 
-![skein-banner.png](docs/assets/skein-banner.png)
+![skein-banner.svg](docs/assets/skein-banner.svg)
+
 
 > A self-learning, privacy-preserving toolkit for recognizing, classifying and extracting
 > structure from messy text and records on the JVM. No GPU, no external AI, no neural
