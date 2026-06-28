@@ -243,4 +243,4 @@ io.skein.extract
 
 See [`examples`](../examples) for `SlotExtractor` driven by a classifier's prediction — the full
 **classify → route → extract** pipeline.
-</content>
+
