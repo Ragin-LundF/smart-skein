@@ -8,6 +8,7 @@ internal val LABEL_FLAGS = setOf(
     "budget", "batch", "strategy", "epochs", "key", "scan-limit", "delimiter",
 )
 internal val PREDICT_FLAGS = setOf("input", "model", "out", "epochs", "delimiter")
+internal val EXPORT_FLAGS = setOf("model", "out")
 
 /** Parses `--name value` tokens into a map. Rejects a token that is not a `--flag` or has no value. */
 internal fun parseFlags(tokens: List<String>): Map<String, String> {

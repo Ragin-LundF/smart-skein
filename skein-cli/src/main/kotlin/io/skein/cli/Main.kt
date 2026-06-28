@@ -11,6 +11,7 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.random.Random
 import kotlin.system.exitProcess
+import kotlin.time.measureTime
 
 private const val DEFAULT_BUDGET = 20
 private const val DEFAULT_BATCH = 8
@@ -45,6 +46,10 @@ private val USAGE = """
         --out <csv>          where to write rows with predicted label + confidence (required)
         --epochs <n>         SGD passes when rebuilding a logreg model (default $DEFAULT_EPOCHS)
         --delimiter <char>   CSV field delimiter (default ,). Use \\t for tab-separated files.
+
+      export   Write a .skein model as human-readable text for inspection.
+        --model <file>       source .skein model (required)
+        --out <file>         destination text file (required)
 """.trimIndent()
 
 // ponytail: hand-rolled `when` dispatch + flag parsing (unknown flags are rejected, not ignored).
@@ -56,11 +61,15 @@ fun main(args: Array<String>) {
     }
     runCatching {
         val flags = parseFlags(tokens = args.drop(n = 1))
-        when (args.first()) {
-            "label" -> runLabel(flags = flags)
-            "predict" -> runPredict(flags = flags)
-            else -> println(USAGE)
+        val time = measureTime {
+            when (args.first()) {
+                "label" -> runLabel(flags = flags)
+                "predict" -> runPredict(flags = flags)
+                "export" -> runExport(flags = flags)
+                else -> println(USAGE)
+            }
         }
+        println("✓ Completed in ${time.absoluteValue}")
     }.onFailure { error ->
         System.err.println("error: ${error.message}\n\n${error.stackTraceToString()}")
         exitProcess(status = 1)
@@ -143,6 +152,14 @@ private fun runPredict(flags: Map<String, String>) {
     )
     writeRows(outPath = outPath, header = header, rows = source.rows, delimiter = delimiter)
     println("Wrote ${source.rows.size} predictions to $outPath")
+}
+
+private fun runExport(flags: Map<String, String>) {
+    requireKnownFlags(flags = flags, allowed = EXPORT_FLAGS)
+    val modelPath = Path(flags.required(name = "model"))
+    val outPath = Path(flags.required(name = "out"))
+    ModelConverter.toText(src = modelPath, dst = outPath)
+    println("Exported model to $outPath")
 }
 
 private fun reportLabelOutcome(engine: CliEngine, labeled: Int, outPath: String, modelPath: String?) {
