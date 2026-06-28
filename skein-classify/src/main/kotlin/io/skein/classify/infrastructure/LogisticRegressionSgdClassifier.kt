@@ -2,6 +2,7 @@ package io.skein.classify.infrastructure
 
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.Label
+import io.skein.classify.domain.LabeledFeatures
 import io.skein.classify.domain.Prediction
 import io.skein.classify.domain.PredictionFactory
 import io.skein.classify.spi.Classifier
@@ -36,6 +37,27 @@ class LogisticRegressionSgdClassifier(
 
     @Volatile
     private var snapshot = LogisticRegressionSnapshot.empty()
+
+    override fun learnAll(observations: List<LabeledFeatures>) {
+        synchronized(writeLock) {
+            for (obs in observations) {
+                ensureLabel(obs.label)
+                val lr = initialLearningRate / (1.0 + decayRate * step)
+                val probs = probabilities(features = obs.features)
+                for (candidate in weightsByLabel.keys) {
+                    val indicator = if (candidate == obs.label) 1.0 else 0.0
+                    applyGradient(
+                        label = candidate,
+                        features = obs.features,
+                        error = probs.getValue(key = candidate) - indicator,
+                        learningRate = lr,
+                    )
+                }
+                step++
+            }
+            snapshot = LogisticRegressionSnapshot.of(weightsByLabel = weightsByLabel, biasByLabel = biasByLabel)
+        }
+    }
 
     override fun learn(features: FeatureVector, label: Label) {
         synchronized(writeLock) {

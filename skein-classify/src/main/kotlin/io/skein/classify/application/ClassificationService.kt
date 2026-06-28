@@ -42,9 +42,18 @@ class ClassificationService(
         learnLabeled(featureText = mapped.featureText, label = label)
     }
 
-    /** Learns from many records. */
+    /** Learns from many records. Publishes one classifier snapshot instead of one per observation. */
     fun learnAll(records: Iterable<Record>) {
-        records.forEach { record -> learn(record) }
+        val observations = records.map { record ->
+            val mapped = mapper.map(record = record)
+            val label = mapped.label
+                ?: throw IllegalArgumentException("cannot learn from a record without a label value")
+            val features = vectorizer.vectorize(text = mapped.featureText)
+            val obs = LabeledFeatures(label = label, features = features)
+            featureStore.add(obs)
+            obs
+        }
+        classifier.learnAll(observations = observations)
     }
 
     /** Corrects a prediction by learning the record under the [correctLabel]. */
