@@ -86,4 +86,31 @@ internal class SchemaInferenceTest {
         assertTrue(actual = schema.field(name = "customer") is IdentifierField)
         assertEquals(expected = SensitivityEnum.PII, actual = schema.field(name = "customer")?.sensitivity)
     }
+
+    @Test
+    internal fun `treats a field with only null values as text`() {
+        // All values null → valuesOf returns empty list → looksLikeIdentifier(emptyList) returns false
+        val schema = inference.infer(
+            records = listOf(
+                Record(values = mapOf("code" to null, "cat" to "a")),
+                Record(values = mapOf("code" to null, "cat" to "b")),
+            ),
+            labelField = "cat",
+        )
+        assertTrue(actual = schema.field(name = "code") is TextField)
+    }
+
+    @Test
+    internal fun `falls back to text when alphanumeric codes have no digits`() {
+        // All values are all-alpha (no digit) → looksLikeIdentifier returns false via the all-digit check
+        val schema = inference.infer(
+            records = listOf(
+                Record(values = mapOf("code" to "ABCDE", "cat" to "a")),
+                Record(values = mapOf("code" to "FGHIJ", "cat" to "b")),
+                Record(values = mapOf("code" to "KLMNO", "cat" to "c")),
+            ),
+            labelField = "cat",
+        )
+        assertTrue(actual = schema.field(name = "code") is TextField)
+    }
 }

@@ -64,4 +64,26 @@ internal class HashingVectorizerTest {
         val vector = vectorizer.vectorize(text = "a longer piece of text with several tokens 123")
         assertTrue(actual = vector.indices.all { index -> index in 0 until (1 shl 18) })
     }
+
+    @Test
+    internal fun `empty text produces an empty vector`() {
+        val vector = vectorizer.vectorize(text = "")
+        assertEquals(expected = 0, actual = vector.nonZeroCount())
+    }
+
+    @Test
+    internal fun `two-byte UTF-8 characters are encoded without error and deterministically`() {
+        // 'é' is U+00E9, in the 0x80–0x7FF range → 2-byte UTF-8 encoding path
+        val vector = vectorizer.vectorize(text = "café")
+        assertTrue(actual = vector.nonZeroCount() > 0)
+        assertContentEquals(expected = vector.indices, actual = vectorizer.vectorize(text = "café").indices)
+    }
+
+    @Test
+    internal fun `three-byte UTF-8 characters are encoded without error and deterministically`() {
+        // '€' is U+20AC (8364 > 0x7FF) → 3-byte UTF-8 encoding path
+        val vector = vectorizer.vectorize(text = "€100")
+        assertTrue(actual = vector.nonZeroCount() > 0)
+        assertContentEquals(expected = vector.indices, actual = vectorizer.vectorize(text = "€100").indices)
+    }
 }

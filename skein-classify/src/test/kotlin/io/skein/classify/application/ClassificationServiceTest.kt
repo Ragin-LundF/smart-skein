@@ -93,4 +93,16 @@ internal class ClassificationServiceTest {
         service.forget()
         assertEquals(expected = 0, actual = service.metrics().totalObservations)
     }
+
+    @Test
+    internal fun `learnAll rejects a record without a label value`() {
+        val service = ClassificationService(
+            schema = schema,
+            privacyMode = PrivacyModeEnum.FEATURES_ONLY,
+            hashingConfig = HashingConfig(key0 = 1L, key1 = 2L),
+        )
+        assertFailsWith<IllegalArgumentException> {
+            service.learnAll(records = listOf(record(purpose = "rent transfer")))
+        }
+    }
 }

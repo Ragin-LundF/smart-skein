@@ -3,6 +3,7 @@ package io.skein.classify.domain
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 internal class SchemaTest {
@@ -37,5 +38,14 @@ internal class SchemaTest {
                 label(name = "b")
             }
         }
+    }
+
+    @Test
+    internal fun `HashingConfig randomKey produces a valid config with non-zero distinct keys`() {
+        val config = HashingConfig.randomKey()
+        assertTrue(actual = config.numFeatures > 0)
+        // Two calls are astronomically unlikely to produce identical 64-bit random keys
+        val other = HashingConfig.randomKey()
+        assertNotEquals(illegal = config.key0, actual = other.key0)
     }
 }

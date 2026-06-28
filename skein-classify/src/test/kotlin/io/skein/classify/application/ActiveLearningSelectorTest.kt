@@ -65,6 +65,26 @@ internal class ActiveLearningSelectorTest {
     }
 
     @Test
+    internal fun `margin is 1_0 when the model knows only one label and cannot split probability mass`() {
+        val singleLabelService = ClassificationService(
+            schema = schema,
+            privacyMode = PrivacyModeEnum.FEATURES_ONLY,
+            hashingConfig = HashingConfig(key0 = 1L, key1 = 2L),
+        )
+        singleLabelService.learnAll(
+            records = listOf(
+                Record(values = mapOf("purpose" to "rent transfer", "category" to "housing")),
+                Record(values = mapOf("purpose" to "monthly apartment", "category" to "housing")),
+            ),
+        )
+        val selector = ActiveLearningSelector(service = singleLabelService)
+        val selected = selector.selectForReview(candidates = listOf(record(purpose = "some text")), limit = 1)
+
+        assertEquals(expected = 1, actual = selected.size)
+        assertEquals(expected = 1.0, actual = selected[0].margin)
+    }
+
+    @Test
     internal fun `least-confidence and entropy strategies also rank the uncertain record first`() {
         val selector = ActiveLearningSelector(service = trainedService())
         val confident = record(purpose = "monthly apartment rent")
