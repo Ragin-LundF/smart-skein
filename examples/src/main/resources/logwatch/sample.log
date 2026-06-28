@@ -1,0 +1,21 @@
+2024-01-15 10:00:01.123 INFO  io.app.Server - Application started successfully on port 8080
+2024-01-15 10:00:02.456 INFO  io.app.Config - Configuration loaded from application.yml
+2024-01-15 10:00:03.789 DEBUG io.app.Jobs - Scheduler initialized with 4 worker threads
+2024-01-15 10:00:10.001 INFO  io.app.Db - Database connection pool initialized (size=10)
+2024-01-15 10:00:15.222 DEBUG io.app.Api - Received GET /api/users from 192.168.1.10
+2024-01-15 10:00:15.350 DEBUG io.app.Api - Processing request: listUsers
+2024-01-15 10:00:16.100 INFO  io.app.Api - Request completed in 38ms
+2024-01-15 10:01:00.000 WARN  io.app.Db - Slow query detected (1823ms): SELECT * FROM orders WHERE status='pending'
+2024-01-15 10:01:30.111 ERROR io.app.Db - SQLException: connection pool exhausted after 30000ms waiting for connection
+2024-01-15 10:02:00.000 ERROR io.app.Auth - authentication failed for user 'admin' from 10.0.0.99
+2024-01-15 10:02:01.001 WARN  io.app.Auth - Unauthorized access attempt to /admin/users from 10.0.0.99
+2024-01-15 10:02:30.500 ERROR io.app.Net - Connection refused: redis://cache-server:6379
+2024-01-15 10:03:00.000 ERROR io.app.JVM - java.lang.OutOfMemoryError: Java heap space at java.util.Arrays.copyOf
+2024-01-15 10:03:01.000 DEBUG io.app.Api - Received GET /api/health
+2024-01-15 10:03:02.000 INFO  io.app.Api - Health check completed successfully
+2024-01-15 10:04:00.000 ERROR io.app.Http - ReadTimeoutException: no response after 5000ms from http://payment-service:8081/charge
+2024-01-15 10:04:30.000 WARN  io.app.Net - connection reset by peer: payment-service:8081
+2024-01-15 10:05:00.000 ERROR io.app.Auth - access denied: user 'guest' attempted to access restricted resource /api/admin/users
+2024-01-15 10:05:30.000 INFO  io.app.Auth - User 'alice' registered successfully
+2024-01-15 10:06:00.000 DEBUG io.app.Jobs - Scheduled cleanup job processing 234 expired sessions
+2024-01-15 10:06:01.000 INFO  io.app.Jobs - Cleanup job completed, removed 234 sessions

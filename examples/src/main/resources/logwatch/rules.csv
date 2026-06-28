@@ -1,0 +1,37 @@
+anomaly_type,level,message
+NORMAL,INFO,started
+NORMAL,INFO,initialized
+NORMAL,INFO,connected
+NORMAL,INFO,registered
+NORMAL,INFO,completed
+NORMAL,INFO,loaded
+NORMAL,DEBUG,processing
+NORMAL,DEBUG,received
+NORMAL,DEBUG,scheduled
+DB_ERROR,ERROR,SQLException
+DB_ERROR,ERROR,JdbcSQLException
+DB_ERROR,ERROR,DataAccessException
+DB_ERROR,ERROR,pool exhausted
+DB_ERROR,WARN,slow query
+DB_ERROR,WARN,query timeout
+TIMEOUT,ERROR,SocketTimeoutException
+TIMEOUT,ERROR,ReadTimeoutException
+TIMEOUT,ERROR,TimeoutException
+TIMEOUT,WARN,timeout
+TIMEOUT,WARN,timed out
+SECURITY,WARN,Unauthorized
+SECURITY,WARN,forbidden
+SECURITY,WARN,invalid token
+SECURITY,ERROR,access denied
+SECURITY,ERROR,authentication failed
+SECURITY,ERROR,suspicious request
+OOM,ERROR,OutOfMemoryError
+OOM,ERROR,heap space
+OOM,ERROR,GC overhead
+OOM,WARN,memory pressure
+CONNECTION_FAIL,ERROR,Connection refused
+CONNECTION_FAIL,ERROR,ConnectException
+CONNECTION_FAIL,ERROR,UnknownHostException
+CONNECTION_FAIL,ERROR,Network unreachable
+CONNECTION_FAIL,WARN,connection reset
+CONNECTION_FAIL,WARN,retry
