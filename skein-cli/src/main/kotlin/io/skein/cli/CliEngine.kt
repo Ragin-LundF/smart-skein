@@ -86,7 +86,12 @@ class CliEngine private constructor(
             )
         }
 
-        /** Rebuilds an engine from a [model] by replaying its observations ([epochs] passes for SGD). */
+        /**
+         * Rebuilds an engine from a [model] by replaying its observations ([epochs] passes for SGD).
+         * Naive Bayes is an exact incremental algorithm: multiple epochs inflate feature counts via
+         * Laplace-smoothing interaction and produce a different (incorrect) model. It is always
+         * rebuilt with a single pass regardless of [epochs].
+         */
         fun restore(model: LoadedModel, epochs: Int): CliEngine {
             val store = InMemoryFeatureStore()
             store.addAll(observations = model.observations)
@@ -97,7 +102,8 @@ class CliEngine private constructor(
                 model = classifierModel,
                 store = store,
             )
-            service.retrain(epochs = epochs)
+            val effectiveEpochs = if (model.classifier == ClassifierKindEnum.NAIVE_BAYES) 1 else epochs
+            service.retrain(epochs = effectiveEpochs)
             return CliEngine(
                 service = service,
                 classifier = model.classifier,

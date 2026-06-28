@@ -48,20 +48,24 @@ class IntFloatHashMap(initialCapacity: Int = DEFAULT_CAPACITY) {
 
     /** The entries as parallel arrays, indices sorted ascending (the sparse-vector layout). */
     fun sortedKeysAndValues(): Pair<IntArray, FloatArray> {
-        val indices = IntArray(size = count)
+        // Pack each (key, value) into one Long so a single sort handles both arrays together,
+        // avoiding a second linear-probe pass to look up values by sorted key.
+        val packed = LongArray(size = count)
         var position = 0
         for (slot in keys.indices) {
             if (keys[slot] != EMPTY) {
-                indices[position] = keys[slot]
-                position++
+                packed[position++] = (keys[slot].toLong() shl INT_BITS) or
+                    (java.lang.Float.floatToRawIntBits(values[slot]).toLong() and LOW_INT_MASK)
             }
         }
-        indices.sort()
-        val sortedValues = FloatArray(size = count)
-        for (i in indices.indices) {
-            sortedValues[i] = valueOf(key = indices[i])
+        packed.sort()
+        val outIndices = IntArray(size = count)
+        val outValues = FloatArray(size = count)
+        for (i in packed.indices) {
+            outIndices[i] = (packed[i] ushr INT_BITS).toInt()
+            outValues[i] = java.lang.Float.intBitsToFloat((packed[i] and LOW_INT_MASK).toInt())
         }
-        return indices to sortedValues
+        return outIndices to outValues
     }
 
     private fun slotForInsert(key: Int): Int {
@@ -70,14 +74,6 @@ class IntFloatHashMap(initialCapacity: Int = DEFAULT_CAPACITY) {
             slot = (slot + 1) and mask
         }
         return slot
-    }
-
-    private fun valueOf(key: Int): Float {
-        var slot = spread(key = key) and mask
-        while (keys[slot] != key) {
-            slot = (slot + 1) and mask
-        }
-        return values[slot]
     }
 
     private fun resize(requestedCapacity: Int) {
@@ -113,5 +109,7 @@ class IntFloatHashMap(initialCapacity: Int = DEFAULT_CAPACITY) {
         const val SPREAD_SHIFT = 16
         const val LOAD_FACTOR_NUMERATOR = 4
         const val LOAD_FACTOR_DENOMINATOR = 3
+        const val INT_BITS = Int.SIZE_BITS          // bits to shift an Int into the high half of a Long
+        const val LOW_INT_MASK = 0xFFFFFFFFL        // mask for the low Int-width bits of a Long
     }
 }

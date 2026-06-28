@@ -37,4 +37,15 @@ internal class SipHashTest {
             actual = SipHash.hash(data = message, key0 = 1L, key1 = 2L),
         )
     }
+
+    @Test
+    internal fun `length-limited overload matches trimmed full-array overload`() {
+        val buf = ByteArray(size = 16)
+        val content = "hello".toByteArray()
+        content.copyInto(destination = buf)
+        assertEquals(
+            expected = SipHash.hash(data = content, key0 = key0, key1 = key1),
+            actual = SipHash.hash(data = buf, length = content.size, key0 = key0, key1 = key1),
+        )
+    }
 }

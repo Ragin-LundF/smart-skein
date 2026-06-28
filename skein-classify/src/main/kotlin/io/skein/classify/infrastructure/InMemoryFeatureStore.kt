@@ -31,8 +31,8 @@ class InMemoryFeatureStore : FeatureStore {
 
     private fun fingerprint(observation: LabeledFeatures): Long {
         var h = observation.label.value.hashCode().toLong()
-        h = h * 1_000_003L xor observation.features.indices.contentHashCode().toLong()
-        h = h * 1_000_003L xor observation.features.values.contentHashCode().toLong()
+        h = h * HASH_PRIME xor observation.features.indices.contentHashCode().toLong()
+        h = h * HASH_PRIME xor observation.features.values.contentHashCode().toLong()
         return h
     }
 
@@ -59,5 +59,9 @@ class InMemoryFeatureStore : FeatureStore {
             observations.clear()
             seen.clear()
         }
+    }
+
+    private companion object {
+        const val HASH_PRIME = 1_000_003L
     }
 }

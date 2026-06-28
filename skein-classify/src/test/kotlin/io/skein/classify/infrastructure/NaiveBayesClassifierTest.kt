@@ -3,6 +3,7 @@ package io.skein.classify.infrastructure
 import io.skein.classify.application.HashingVectorizer
 import io.skein.classify.domain.HashingConfig
 import io.skein.classify.domain.Label
+import io.skein.classify.domain.LabeledFeatures
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -63,5 +64,36 @@ internal class NaiveBayesClassifierTest {
         val classifier = trained()
         classifier.forget()
         assertTrue(actual = classifier.labels().isEmpty())
+    }
+
+    @Test
+    internal fun `learnAll produces identical predictions to sequential learn`() {
+        val observations = listOf(
+            LabeledFeatures(label = Label("spam"), features = vectorizer.vectorize("win free money now")),
+            LabeledFeatures(label = Label("spam"), features = vectorizer.vectorize("free money win big")),
+            LabeledFeatures(label = Label("ham"), features = vectorizer.vectorize("team meeting at noon")),
+            LabeledFeatures(label = Label("ham"), features = vectorizer.vectorize("lunch and meeting today")),
+        )
+        val probe = vectorizer.vectorize(text = "win money")
+
+        val sequential = NaiveBayesClassifier()
+        observations.forEach { obs -> sequential.learn(features = obs.features, label = obs.label) }
+
+        val batch = NaiveBayesClassifier()
+        batch.learnAll(observations = observations)
+
+        val seqPred = sequential.classify(features = probe)
+        val batchPred = batch.classify(features = probe)
+        assertEquals(expected = seqPred.label, actual = batchPred.label)
+        assertEquals(expected = seqPred.confidence, actual = batchPred.confidence, absoluteTolerance = 1e-9)
+    }
+
+    @Test
+    internal fun `learnAll rejects classification when observation list is empty`() {
+        val classifier = NaiveBayesClassifier()
+        assertFailsWith<IllegalStateException> {
+            classifier.learnAll(observations = emptyList())
+            classifier.classify(features = vectorizer.vectorize("anything"))
+        }
     }
 }

@@ -24,17 +24,22 @@ class HashingVectorizer(
 
     private val scratch = ThreadLocal.withInitial { IntFloatHashMap() }
 
+    // Reusable UTF-8 encode buffer per thread. Max char n-gram: charNgramMax chars × 4 UTF-8 bytes.
+    // 256 bytes covers word n-grams up to ~40 chars without reallocation.
+    private val encBuf = ThreadLocal.withInitial { ByteArray(256) }
+
     fun vectorize(text: String): FeatureVector {
         val normalized = normalizer.normalize(raw = text)
         val accumulator = scratch.get()
+        val buf = encBuf.get()
         accumulator.clear()
-        addCharNgrams(text = normalized, accumulator = accumulator)
-        addWordNgrams(text = normalized, accumulator = accumulator)
+        addCharNgrams(text = normalized, accumulator = accumulator, buf = buf)
+        addWordNgrams(text = normalized, accumulator = accumulator, buf = buf)
         val (indices, values) = accumulator.sortedKeysAndValues()
         return FeatureVector(indices = indices, values = values)
     }
 
-    private fun addCharNgrams(text: String, accumulator: IntFloatHashMap) {
+    private fun addCharNgrams(text: String, accumulator: IntFloatHashMap, buf: ByteArray) {
         if (text.isEmpty()) {
             return
         }
@@ -43,15 +48,13 @@ class HashingVectorizer(
                 break
             }
             for (start in 0..text.length - size) {
-                accumulate(
-                    ngram = text.substring(startIndex = start, endIndex = start + size),
-                    accumulator = accumulator,
-                )
+                val len = encodeUtf8(text = text, start = start, end = start + size, buf = buf, offset = 0)
+                accumulator.addTo(key = bucketOf(buf = buf, length = len), delta = 1.0f)
             }
         }
     }
 
-    private fun addWordNgrams(text: String, accumulator: IntFloatHashMap) {
+    private fun addWordNgrams(text: String, accumulator: IntFloatHashMap, buf: ByteArray) {
         val words = text.split(regex = WHITESPACE).filter { word -> word.isNotEmpty() }
         if (words.isEmpty()) {
             return
@@ -61,26 +64,47 @@ class HashingVectorizer(
                 break
             }
             for (start in 0..words.size - size) {
-                accumulate(
-                    ngram = words.subList(start, start + size).joinToString(separator = " "),
-                    accumulator = accumulator,
-                )
+                var pos = 0
+                for (wi in start until start + size) {
+                    if (wi > start) buf[pos++] = ' '.code.toByte()
+                    pos += encodeUtf8(text = words[wi], start = 0, end = words[wi].length, buf = buf, offset = pos)
+                }
+                accumulator.addTo(key = bucketOf(buf = buf, length = pos), delta = 1.0f)
             }
         }
     }
 
-    private fun accumulate(ngram: String, accumulator: IntFloatHashMap) {
-        accumulator.addTo(key = indexOf(ngram), delta = 1.0f)
-    }
-
-    private fun indexOf(ngram: String): Int {
-        val hash = SipHash.hash(
-            data = ngram.toByteArray(charset = Charsets.UTF_8),
-            key0 = config.key0,
-            key1 = config.key1,
-        )
+    private fun bucketOf(buf: ByteArray, length: Int): Int {
+        val hash = SipHash.hash(data = buf, length = length, key0 = config.key0, key1 = config.key1)
         val bucket = (hash % config.numFeatures).toInt()
         return if (bucket < 0) bucket + config.numFeatures else bucket
+    }
+
+    /**
+     * Encodes [text][start..end) as UTF-8 bytes into [buf] starting at [offset].
+     * Handles BMP code points (U+0000–U+FFFF) — sufficient for financial text.
+     * Returns the number of bytes written.
+     */
+    // MagicNumber suppressed: every literal here is a fixed constant mandated by the UTF-8 spec.
+    @Suppress("MagicNumber")
+    private fun encodeUtf8(text: String, start: Int, end: Int, buf: ByteArray, offset: Int): Int {
+        var pos = offset
+        for (i in start until end) {
+            val c = text[i].code
+            when {
+                c < 0x80 -> buf[pos++] = c.toByte()
+                c < 0x800 -> {
+                    buf[pos++] = (0xC0 or (c shr 6)).toByte()
+                    buf[pos++] = (0x80 or (c and 0x3F)).toByte()
+                }
+                else -> {
+                    buf[pos++] = (0xE0 or (c shr 12)).toByte()
+                    buf[pos++] = (0x80 or ((c shr 6) and 0x3F)).toByte()
+                    buf[pos++] = (0x80 or (c and 0x3F)).toByte()
+                }
+            }
+        }
+        return pos - offset
     }
 
     private companion object {

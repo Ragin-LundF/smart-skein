@@ -59,7 +59,9 @@ internal fun parseDelimiter(value: String?): Char {
         null -> ','
         "\\t" -> '\t'
         else -> {
-            require(value = value.length == 1) { "--delimiter must be a single character (or \\\\t for tab), got '$value'" }
+            require(value = value.length == 1) {
+                "--delimiter must be a single character (or \\\\t for tab), got '$value'"
+            }
             value[0]
         }
     }

@@ -19,18 +19,26 @@ object SipHash {
 
     /** Computes the 64-bit SipHash-2-4 of [data] under the 128-bit key ([key0], [key1]). */
     fun hash(data: ByteArray, key0: Long, key1: Long): Long {
+        return hash(data = data, length = data.size, key0 = key0, key1 = key1)
+    }
+
+    /**
+     * Computes the 64-bit SipHash-2-4 of the first [length] bytes of [data].
+     * Allows callers to reuse a pre-allocated buffer without allocating a trimmed copy.
+     */
+    fun hash(data: ByteArray, length: Int, key0: Long, key1: Long): Long {
         var v0 = key0 xor 0x736f6d6570736575L
         var v1 = key1 xor 0x646f72616e646f6dL
         var v2 = key0 xor 0x6c7967656e657261L
         var v3 = key1 xor 0x7465646279746573L
 
-        val end = data.size - (data.size % Long.SIZE_BYTES)
+        val end = length - (length % Long.SIZE_BYTES)
         var offset = 0
         while (offset < end) {
             val block = littleEndianLong(data = data, offset = offset)
             v3 = v3 xor block
             // SIPROUND, inlined (no per-round allocation, no lambda capture). v0..v3 mutate in place.
-            for (round in 0 until COMPRESSION_ROUNDS) {
+            repeat(times = COMPRESSION_ROUNDS) {
                 v0 += v1; v1 = rotateLeft(v1, 13); v1 = v1 xor v0; v0 = rotateLeft(v0, 32)
                 v2 += v3; v3 = rotateLeft(v3, 16); v3 = v3 xor v2
                 v0 += v3; v3 = rotateLeft(v3, 21); v3 = v3 xor v0
@@ -40,15 +48,15 @@ object SipHash {
             offset += Long.SIZE_BYTES
         }
 
-        var lastBlock = (data.size.toLong() and 0xff) shl 56
+        var lastBlock = (length.toLong() and 0xff) shl 56
         var shift = 0
-        while (offset < data.size) {
+        while (offset < length) {
             lastBlock = lastBlock or ((data[offset].toLong() and 0xff) shl shift)
             shift += 8
             offset++
         }
         v3 = v3 xor lastBlock
-        for (round in 0 until COMPRESSION_ROUNDS) {
+        repeat(times = COMPRESSION_ROUNDS) {
             v0 += v1; v1 = rotateLeft(v1, 13); v1 = v1 xor v0; v0 = rotateLeft(v0, 32)
             v2 += v3; v3 = rotateLeft(v3, 16); v3 = v3 xor v2
             v0 += v3; v3 = rotateLeft(v3, 21); v3 = v3 xor v0
@@ -57,7 +65,7 @@ object SipHash {
         v0 = v0 xor lastBlock
 
         v2 = v2 xor 0xff
-        for (round in 0 until FINALIZATION_ROUNDS) {
+        repeat(times = FINALIZATION_ROUNDS) {
             v0 += v1; v1 = rotateLeft(v1, 13); v1 = v1 xor v0; v0 = rotateLeft(v0, 32)
             v2 += v3; v3 = rotateLeft(v3, 16); v3 = v3 xor v2
             v0 += v3; v3 = rotateLeft(v3, 21); v3 = v3 xor v0
