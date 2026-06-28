@@ -2,6 +2,7 @@ package io.skein.classify.infrastructure
 
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.Label
+import io.skein.classify.domain.LabeledFeatures
 import io.skein.classify.domain.Prediction
 import io.skein.classify.spi.Classifier
 import kotlin.jvm.Volatile
@@ -34,6 +35,40 @@ class NaiveBayesClassifier(private val smoothingAlpha: Double = DEFAULT_SMOOTHIN
                 features = features,
                 label = label,
                 newVocabularySize = seenFeatures.size,
+            )
+        }
+    }
+
+    /**
+     * Batch variant: accumulates counts in mutable maps and publishes exactly ONE snapshot at the
+     * end instead of one per observation. Avoids the O(obs × map_copy) cost of the copy-on-write
+     * protocol — critical for bulk restore of large models.
+     */
+    override fun learnAll(observations: List<LabeledFeatures>) {
+        synchronized(writeLock) {
+            val docCounts = HashMap<Label, Long>()
+            val featSums = HashMap<Label, HashMap<Int, Double>>()
+            val featMass = HashMap<Label, Double>()
+            for (obs in observations) {
+                docCounts[obs.label] = (docCounts[obs.label] ?: 0L) + 1L
+                val sums = featSums.getOrPut(obs.label) { HashMap() }
+                var mass = featMass[obs.label] ?: 0.0
+                for (p in obs.features.indices.indices) {
+                    val idx = obs.features.indices[p]
+                    val v = obs.features.values[p].toDouble()
+                    sums[idx] = (sums[idx] ?: 0.0) + v
+                    mass += v
+                    seenFeatures.add(idx)
+                }
+                featMass[obs.label] = mass
+            }
+            snapshot = NaiveBayesSnapshot(
+                labelDocumentCounts = docCounts,
+                featureSumsByLabel = featSums,
+                featureMassByLabel = featMass,
+                totalDocuments = observations.size.toLong(),
+                vocabularySize = seenFeatures.size,
+                smoothingAlpha = smoothingAlpha,
             )
         }
     }

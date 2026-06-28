@@ -5,9 +5,10 @@ import io.skein.classify.domain.UncertaintyStrategyEnum
 
 internal val LABEL_FLAGS = setOf(
     "input", "label-col", "out", "model", "classifier",
-    "budget", "batch", "strategy", "epochs", "key", "scan-limit",
+    "budget", "batch", "strategy", "epochs", "key", "scan-limit", "delimiter",
 )
-internal val PREDICT_FLAGS = setOf("input", "model", "out", "epochs")
+internal val PREDICT_FLAGS = setOf("input", "model", "out", "epochs", "delimiter")
+internal val EXPORT_FLAGS = setOf("model", "out")
 
 /** Parses `--name value` tokens into a map. Rejects a token that is not a `--flag` or has no value. */
 internal fun parseFlags(tokens: List<String>): Map<String, String> {
@@ -50,6 +51,19 @@ internal fun parseStrategy(value: String?): UncertaintyStrategyEnum {
         "least-confidence" -> UncertaintyStrategyEnum.LEAST_CONFIDENCE
         "entropy" -> UncertaintyStrategyEnum.ENTROPY
         else -> throw IllegalArgumentException("unknown --strategy '$value'")
+    }
+}
+
+internal fun parseDelimiter(value: String?): Char {
+    return when (value) {
+        null -> ','
+        "\\t" -> '\t'
+        else -> {
+            require(value = value.length == 1) {
+                "--delimiter must be a single character (or \\\\t for tab), got '$value'"
+            }
+            value[0]
+        }
     }
 }
 

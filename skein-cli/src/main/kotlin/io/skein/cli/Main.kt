@@ -3,6 +3,7 @@ package io.skein.cli
 import io.skein.classify.application.SchemaInference
 import io.skein.classify.domain.HashingConfig
 import io.skein.classify.domain.Record
+import java.nio.file.Path
 import java.util.Locale
 import kotlin.io.path.Path
 import kotlin.io.path.exists
@@ -10,6 +11,7 @@ import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.random.Random
 import kotlin.system.exitProcess
+import kotlin.time.measureTime
 
 private const val DEFAULT_BUDGET = 20
 private const val DEFAULT_BATCH = 8
@@ -36,12 +38,18 @@ private val USAGE = """
         --key <k0>,<k1>      fixed hashing key for a fresh model (default: random, then saved)
         --scan-limit <n>     cap rows scored per round; 0 = score the whole pool (default $DEFAULT_SCAN_LIMIT).
                              Set this (e.g. 100000) for multi-million-row pools to bound per-round work.
+        --delimiter <char>   CSV field delimiter (default ,). Use \\t for tab-separated files.
 
       predict  Classify every input row using a saved model.
         --input <csv>        input records (required)
         --model <file>       saved model (required)
         --out <csv>          where to write rows with predicted label + confidence (required)
         --epochs <n>         SGD passes when rebuilding a logreg model (default $DEFAULT_EPOCHS)
+        --delimiter <char>   CSV field delimiter (default ,). Use \\t for tab-separated files.
+
+      export   Write a .skein model as human-readable text for inspection.
+        --model <file>       source .skein model (required)
+        --out <file>         destination text file (required)
 """.trimIndent()
 
 // ponytail: hand-rolled `when` dispatch + flag parsing (unknown flags are rejected, not ignored).
@@ -53,11 +61,15 @@ fun main(args: Array<String>) {
     }
     runCatching {
         val flags = parseFlags(tokens = args.drop(n = 1))
-        when (args.first()) {
-            "label" -> runLabel(flags = flags)
-            "predict" -> runPredict(flags = flags)
-            else -> println(USAGE)
+        val time = measureTime {
+            when (args.first()) {
+                "label" -> runLabel(flags = flags)
+                "predict" -> runPredict(flags = flags)
+                "export" -> runExport(flags = flags)
+                else -> println(USAGE)
+            }
         }
+        println("✓ Completed in ${time.absoluteValue}")
     }.onFailure { error ->
         System.err.println("error: ${error.message}\n\n${error.stackTraceToString()}")
         exitProcess(status = 1)
@@ -72,12 +84,13 @@ private fun runLabel(flags: Map<String, String>) {
     val modelPath = flags["model"]?.let { value -> Path(value) }
     val epochs = flags["epochs"]?.toInt() ?: DEFAULT_EPOCHS
 
-    val source = CsvRecordSource(text = inputPath.readText())
+    val delimiter = parseDelimiter(value = flags["delimiter"])
+    val source = CsvRecordSource(text = inputPath.readText(), delimiter = delimiter)
     require(value = source.header.isNotEmpty()) { "input CSV has no header row" }
     if (labelColumn !in source.header) {
         System.err.println(
             "warning: --label-col '$labelColumn' is not in the input header ${source.header}; " +
-                "treating all rows as unlabeled",
+                    "treating all rows as unlabeled",
         )
     }
 
@@ -106,7 +119,7 @@ private fun runLabel(flags: Map<String, String>) {
     ).run(rows = source.rows)
 
     val header = withColumn(header = source.header, column = engine.labelColumn)
-    writeRows(outPath = outPath, header = header, rows = source.rows)
+    writeRows(outPath = outPath, header = header, rows = source.rows, delimiter = delimiter)
     modelPath?.let { path -> engine.save(path = path) }
     reportLabelOutcome(
         engine = engine,
@@ -126,8 +139,8 @@ private fun runPredict(flags: Map<String, String>) {
     )
     val labelColumn = engine.labelColumn
     val confidenceColumn = "${labelColumn}_confidence"
-
-    val source = CsvRecordSource(text = inputPath.readText())
+    val delimiter = parseDelimiter(value = flags["delimiter"])
+    val source = CsvRecordSource(text = inputPath.readText(), delimiter = delimiter)
     source.rows.forEach { row ->
         val prediction = engine.service.classify(record = Record(values = row))
         row[labelColumn] = prediction.label.value
@@ -137,8 +150,16 @@ private fun runPredict(flags: Map<String, String>) {
         header = withColumn(header = source.header, column = labelColumn),
         column = confidenceColumn,
     )
-    writeRows(outPath = outPath, header = header, rows = source.rows)
+    writeRows(outPath = outPath, header = header, rows = source.rows, delimiter = delimiter)
     println("Wrote ${source.rows.size} predictions to $outPath")
+}
+
+private fun runExport(flags: Map<String, String>) {
+    requireKnownFlags(flags = flags, allowed = EXPORT_FLAGS)
+    val modelPath = Path(flags.required(name = "model"))
+    val outPath = Path(flags.required(name = "out"))
+    ModelConverter.toText(src = modelPath, dst = outPath)
+    println("Exported model to $outPath")
 }
 
 private fun reportLabelOutcome(engine: CliEngine, labeled: Int, outPath: String, modelPath: String?) {
@@ -154,8 +175,13 @@ private fun reportLabelOutcome(engine: CliEngine, labeled: Int, outPath: String,
     }
 }
 
-private fun writeRows(outPath: java.nio.file.Path, header: List<String>, rows: List<Map<String, Any?>>) {
-    outPath.writeText(text = CsvWriter(header = header).write(rows = rows))
+private fun writeRows(
+    outPath: Path,
+    header: List<String>,
+    rows: List<Map<String, Any?>>,
+    delimiter: Char = ','
+) {
+    outPath.writeText(text = CsvWriter(header = header, delimiter = delimiter).write(rows = rows))
 }
 
 private fun withColumn(header: List<String>, column: String): List<String> {

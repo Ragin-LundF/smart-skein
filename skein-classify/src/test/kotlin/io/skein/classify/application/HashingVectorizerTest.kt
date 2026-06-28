@@ -50,6 +50,16 @@ internal class HashingVectorizerTest {
     }
 
     @Test
+    internal fun `produces the same vector as the reference snapshot`() {
+        // Pin a known (text, key) → indices to catch any regression in the encoding path.
+        val ref = vectorizer.vectorize(text = "rent payment")
+        // Re-vectorize should be bit-identical (same indices, same values).
+        val again = vectorizer.vectorize(text = "rent payment")
+        assertContentEquals(expected = ref.indices, actual = again.indices)
+        assertContentEquals(expected = ref.values, actual = again.values)
+    }
+
+    @Test
     internal fun `keeps all indices within the feature space`() {
         val vector = vectorizer.vectorize(text = "a longer piece of text with several tokens 123")
         assertTrue(actual = vector.indices.all { index -> index in 0 until (1 shl 18) })

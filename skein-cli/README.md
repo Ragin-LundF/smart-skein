@@ -16,6 +16,7 @@ it standalone without ever adding it to your own project's runtime classpath —
 |---------|--------------|
 | `label`   | Train on the rows that already have a label, then repeatedly surface the **most-uncertain** unlabeled rows for you to confirm or correct. Writes the enriched CSV and saves the model. |
 | `predict` | Load a saved model and classify every row of an input CSV (predicted label + confidence). |
+| `export`  | Convert a binary `.skein` model file to a human-readable text file for inspection. |
 
 ## Run it
 
@@ -87,6 +88,32 @@ Then reuse the saved model to classify everything in one shot:
 **`predict`**: `--input`, `--model`, `--out` (all required), `--epochs` (logreg rebuild, default `5`).
 Adds `<label-col>` and `<label-col>_confidence` columns.
 
+**`export`**
+
+| Flag | Required | Meaning |
+|------|----------|---------|
+| `--model <file>` | yes | Source `.skein` model file. |
+| `--out <file>` | yes | Destination text file. |
+
+Writes a plain-text representation of the model — schema fields, classifier type, hashing config,
+and all labeled observations as sparse feature vectors:
+
+```
+skein-model 1
+classifier NAIVE_BAYES
+hashing <key0> <key1> 262144 3 5 1 2
+field TEXT purpose PUBLIC
+field IDENTIFIER iban PUBLIC
+field LABEL category
+---
+insurance	1:0.5 3:0.8 15:1.0
+rent	2:0.3 7:1.0
+```
+
+Useful for auditing what a model learned, diffing two model versions, or just understanding the
+schema. The hashing key is present in the output — treat the exported file with the same care as the
+binary model (see [Persistence & privacy](#persistence--privacy)).
+
 ## Scaling to large pools
 
 Active learning shines when the unlabeled pool is huge — public datasets, or data generated from
@@ -147,10 +174,6 @@ regression deterministically — there is nothing classifier-internal to go stal
 - The file stores only the irreversible **hashed** feature vectors and labels — never clear-text record
   content (the engine runs in `FEATURES_ONLY` privacy mode). **But it contains the hashing key**, which
   is the privacy secret, so treat the model file as sensitive and don't commit it.
-
-> Why no ONNX/external format? Skein is classical CPU ML with a keyed feature-hashing vectorizer that
-> ONNX-ML can't represent, so an export couldn't reproduce features from raw text or be reloaded to
-> keep training. The replay format above is dependency-free and round-trips losslessly.
 
 ## Build
 

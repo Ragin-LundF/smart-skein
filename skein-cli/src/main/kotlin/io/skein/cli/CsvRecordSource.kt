@@ -11,13 +11,13 @@ import io.skein.classify.spi.RecordSource
  * ponytail: parses the whole text up front (training sets a human labels by hand are small). Stream
  * row-by-row only if a corpus ever outgrows memory.
  */
-class CsvRecordSource(text: String) : RecordSource {
+class CsvRecordSource(text: String, delimiter: Char = ',') : RecordSource {
 
     val header: List<String>
     val rows: List<MutableMap<String, Any?>>
 
     init {
-        val parsed = CsvCodec.parse(text = text)
+        val parsed = CsvCodec.parse(text = text, delimiter = delimiter)
         if (parsed.isEmpty()) {
             header = emptyList()
             rows = emptyList()

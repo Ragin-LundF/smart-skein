@@ -14,13 +14,12 @@ package io.skein.cli
 object CsvCodec {
 
     private const val QUOTE = '"'
-    private const val COMMA = ','
     private const val BOM = "\uFEFF"
 
     /** Parses [text] into rows of string fields. Empty input yields no rows. */
-    fun parse(text: String): List<List<String>> {
+    fun parse(text: String, delimiter: Char = ','): List<List<String>> {
         val input = text.removePrefix(prefix = BOM)
-        val scan = Scan()
+        val scan = Scan(delimiter = delimiter)
         var index = 0
         while (index < input.length) {
             index += scan.step(text = input, index = index)
@@ -30,13 +29,18 @@ object CsvCodec {
     }
 
     /** Formats one [row] of fields into a CSV line (no trailing newline). */
-    fun formatRow(row: List<String>): String {
-        return row.joinToString(separator = COMMA.toString()) { value -> escape(value = value) }
+    fun formatRow(row: List<String>, delimiter: Char = ','): String {
+        return row.joinToString(separator = delimiter.toString()) { value ->
+            escape(
+                value = value,
+                delimiter = delimiter
+            )
+        }
     }
 
-    private fun escape(value: String): String {
+    private fun escape(value: String, delimiter: Char): String {
         val needsQuoting = value.any { character ->
-            character == QUOTE || character == COMMA || character == '\n' || character == '\r'
+            character == QUOTE || character == delimiter || character == '\n' || character == '\r'
         }
         if (!needsQuoting) {
             return value
@@ -45,7 +49,7 @@ object CsvCodec {
     }
 
     /** Mutable cursor over the input; each [step] consumes one or two characters. */
-    private class Scan {
+    private class Scan(private val delimiter: Char) {
 
         val rows = ArrayList<List<String>>()
         private val field = StringBuilder()
@@ -88,7 +92,7 @@ object CsvCodec {
         private fun stepUnquoted(character: Char, next: Char?): Int {
             return when (character) {
                 QUOTE -> openQuote()
-                COMMA -> endField()
+                delimiter -> endField()
                 '\n' -> endRow()
                 '\r' -> endRow() + if (next == '\n') 1 else 0
                 else -> append(character = character)

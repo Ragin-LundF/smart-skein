@@ -83,9 +83,7 @@ class ClassificationService(
             } else {
                 observations.shuffled(random = Random(seed = seed + epoch))
             }
-            ordered.forEach { observation ->
-                classifier.learn(features = observation.features, label = observation.label)
-            }
+            classifier.learnAll(observations = ordered)
         }
     }
 

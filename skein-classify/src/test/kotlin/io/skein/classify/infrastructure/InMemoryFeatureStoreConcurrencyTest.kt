@@ -10,18 +10,19 @@ import kotlin.test.assertEquals
 internal class InMemoryFeatureStoreConcurrencyTest {
 
     @Test
-    internal fun `concurrent adds from many threads keep every observation`() {
+    internal fun `concurrent adds from many threads keep every unique observation`() {
         val store = InMemoryFeatureStore()
         val threadCount = 8
         val perThread = 500
-        val observation = LabeledFeatures(
-            label = Label(value = "x"),
-            features = FeatureVector(indices = intArrayOf(1), values = floatArrayOf(1.0f)),
-        )
-        val workers = (0 until threadCount).map {
-            thread { repeat(times = perThread) { store.add(observation = observation) } }
+        val workers = (0 until threadCount).map { threadIndex ->
+            val unique = LabeledFeatures(
+                label = Label(value = "label-$threadIndex"),
+                features = FeatureVector(indices = intArrayOf(threadIndex), values = floatArrayOf(1.0f)),
+            )
+            // Each thread adds the same unique observation perThread times — dedup keeps exactly one.
+            thread { repeat(times = perThread) { store.add(observation = unique) } }
         }
         workers.forEach { it.join() }
-        assertEquals(expected = threadCount * perThread, actual = store.size())
+        assertEquals(expected = threadCount, actual = store.size())
     }
 }

@@ -10,18 +10,30 @@ import io.skein.classify.spi.FeatureStore
  * Thread-safe: all access is guarded by an internal lock, and reads return copies, so it is safe to
  * import (write) and train/classify (read) concurrently.
  *
- * ponytail: keeps every observation in a list (unbounded). For huge corpora use a paged/persistent
- * adapter such as the PostgreSQL store.
+ * Duplicate observations (same label + identical feature vector) are silently discarded so that
+ * repeated ingestion of the same source data does not inflate the corpus or the saved model file.
+ *
+ * ponytail: keeps every unique observation in a list (unbounded). For huge corpora use a
+ * paged/persistent adapter such as the PostgreSQL store.
  */
 class InMemoryFeatureStore : FeatureStore {
 
     private val lock = Any()
     private val observations = ArrayList<LabeledFeatures>()
+    private val seen = HashSet<Long>()
 
     override fun add(observation: LabeledFeatures) {
+        val fp = fingerprint(observation)
         synchronized(lock) {
-            observations.add(observation)
+            if (seen.add(fp)) observations.add(observation)
         }
+    }
+
+    private fun fingerprint(observation: LabeledFeatures): Long {
+        var h = observation.label.value.hashCode().toLong()
+        h = h * HASH_PRIME xor observation.features.indices.contentHashCode().toLong()
+        h = h * HASH_PRIME xor observation.features.values.contentHashCode().toLong()
+        return h
     }
 
     override fun all(): List<LabeledFeatures> {
@@ -45,6 +57,11 @@ class InMemoryFeatureStore : FeatureStore {
     override fun clear() {
         synchronized(lock) {
             observations.clear()
+            seen.clear()
         }
+    }
+
+    private companion object {
+        const val HASH_PRIME = 1_000_003L
     }
 }

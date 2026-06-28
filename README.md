@@ -46,6 +46,10 @@ Published modules ship a main jar, a sources jar and a Dokka-generated javadoc j
 metadata (MIT license, SCM), to Maven Central (Sonatype Central Portal, GPG-signed via JReleaser)
 and GitHub Packages. `skein-bom` aligns all module versions for consumers.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
 ## Toolchain
 
 - Kotlin 2.3 (K2), JDK 25, Gradle 9.6 (wrapper committed).
