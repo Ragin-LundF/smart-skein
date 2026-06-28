@@ -29,3 +29,5 @@ logs/*
 # Release / signing — never commit keys (the release workflow materializes these from secrets)
 ragin_*.pgp
 *.gpg
+*.skein
+skein-demo

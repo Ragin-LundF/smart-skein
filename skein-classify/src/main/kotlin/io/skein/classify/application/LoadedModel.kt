@@ -1,11 +1,11 @@
-package io.skein.cli
+package io.skein.classify.application
 
 import io.skein.classify.domain.HashingConfig
 import io.skein.classify.domain.LabeledFeatures
 import io.skein.classify.domain.Schema
 
 /**
- * A model restored from disk: everything needed to rebuild an engine and keep training. The
+ * A model restored from disk: everything needed to rebuild a [ClassificationService] and keep training. The
  * [observations] are replayed into a fresh classifier (see `ClassificationService.retrain`), so the
  * model state is reproduced exactly rather than stored as opaque classifier internals.
  */

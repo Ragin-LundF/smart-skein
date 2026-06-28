@@ -297,5 +297,4 @@ io.skein.text
 > **Calibration reminder:** token classification is heuristic and locale-tuned. The `TokenPatternConfig`
 > passed to `TypedTokenizer` and the privacy threshold in `FrequencyModel` are the knobs that adapt
 > Skein to your data — treat them as the first thing to tune when results look off.
-</content>
-</invoke>
+

@@ -386,4 +386,4 @@ io.skein.classify
 > **Privacy summary:** PII fields never enter `featureText`; feature text is hashed with a keyed,
 > irreversible PRF; `key0/key1` are a required secret you control; and `ENCRYPTED_SOURCE` + an
 > encrypting store is the only way original content is retained, always encrypted at rest.
-</content>
+

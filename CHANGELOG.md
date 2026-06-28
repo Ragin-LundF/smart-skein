@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-06-28
+
+- Fixed some performance issues in training for classification
+- Added a new example, `logwatch`, for monitoring log files and extracting structured data with classification
+
 ## [1.0.0] - 2026-06-28
 
 ### First final release

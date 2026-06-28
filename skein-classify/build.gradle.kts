@@ -4,6 +4,7 @@ plugins {
     id("skein.published-library-conventions")
     id("skein.benchmark-conventions")
     id("skein.coverage-conventions")
+    alias(libs.plugins.kotlin.serialization)
 }
 
 description = "Skein classification: record → label, typo-tolerant, self-training, privacy-preserving."
@@ -13,6 +14,7 @@ extra["publishDescription"] = "Record → label classification with privacy-pres
 
 dependencies {
     api(project(":skein-text"))
+    implementation(libs.kotlinx.serialization.protobuf)
 
     testImplementation(libs.kotlin.test.junit5)
     testRuntimeOnly(libs.junit.jupiter)

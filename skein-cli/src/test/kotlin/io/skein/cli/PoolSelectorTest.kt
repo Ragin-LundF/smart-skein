@@ -1,5 +1,6 @@
 package io.skein.cli
 
+import io.skein.classify.application.ClassifierKindEnum
 import io.skein.classify.domain.HashingConfig
 import io.skein.classify.domain.Record
 import io.skein.classify.domain.Schema

@@ -183,4 +183,3 @@ io.skein.store.postgres
 └─ infrastructure/  PostgresFeatureStore, FeatureVectorCodec, SchemaMigrator,
                     NoEncryption, AesGcmEncryption, TomcatJdbcDataSourceFactory
 ```
-</content>

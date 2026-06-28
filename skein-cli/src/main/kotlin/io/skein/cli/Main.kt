@@ -1,5 +1,6 @@
 package io.skein.cli
 
+import io.skein.classify.application.ModelStore
 import io.skein.classify.application.SchemaInference
 import io.skein.classify.domain.HashingConfig
 import io.skein.classify.domain.Record
