@@ -1,0 +1,32 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>skein — untangle text into structure</title>
+<desc>Banner for the skein toolkit: a coiled skein of yarn on the left whose threads straighten into ordered parallel strands and structured token tiles, next to the wordmark skein.</desc>
+<rect x="0" y="0" width="1200" height="320" rx="32" fill="#171331"/>
+
+<!-- ordered threads emerging to the right -->
+<g fill="none" stroke-linecap="round">
+  <path d="M306,165 C360,165 366,138 430,138 L720,138" stroke="#F0997B" stroke-width="5.5"/>
+  <path d="M306,165 L720,165" stroke="#EF9F27" stroke-width="5.5"/>
+  <path d="M306,165 C360,165 366,192 430,192 L720,192" stroke="#5DCAA5" stroke-width="5.5"/>
+</g>
+
+<!-- the skein (coil) -->
+<g fill="none" stroke-linecap="round">
+  <ellipse cx="208" cy="165" rx="98" ry="68" stroke="#F0997B" stroke-width="6"/>
+  <ellipse cx="208" cy="165" rx="70" ry="48" stroke="#EF9F27" stroke-width="5.5"/>
+  <ellipse cx="208" cy="165" rx="42" ry="28" stroke="#5DCAA5" stroke-width="5"/>
+  <path d="M178,104 Q210,165 178,226" stroke="#2c2552" stroke-width="13"/>
+  <path d="M240,104 Q214,165 240,226" stroke="#2c2552" stroke-width="13"/>
+  <path d="M150,228 C138,250 128,260 116,268" stroke="#F0997B" stroke-width="5"/>
+</g>
+
+<!-- structured token tiles -->
+<rect x="720" y="126" width="24" height="24" rx="7" fill="#F0997B"/>
+<rect x="720" y="153" width="24" height="24" rx="7" fill="#EF9F27"/>
+<rect x="720" y="180" width="24" height="24" rx="7" fill="#5DCAA5"/>
+
+<!-- wordmark + lockup -->
+<text x="782" y="182" fill="#F4EFE6" style="font-family:Poppins;font-weight:500;font-size:104px;letter-spacing:-3px">skein</text>
+<text x="788" y="224" fill="#b9b3d6" style="font-family:Poppins;font-weight:400;font-size:25px;letter-spacing:.3px">untangle text into structure</text>
+<text x="788" y="255" fill="#7f78ad" style="font-family:Poppins;font-weight:400;font-size:17px;letter-spacing:.4px">classify · extract · on the JVM</text>
+</svg>
