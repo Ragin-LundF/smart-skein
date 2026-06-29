@@ -20,3 +20,4 @@ include("skein-extract")
 include("skein-store-postgres")
 include("skein-cli")
 include("examples")
+include("skein-demo") // private, no commit
