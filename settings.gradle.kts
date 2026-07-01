@@ -21,3 +21,5 @@ include("skein-store-postgres")
 include("skein-cli")
 include("examples")
 
+val localSettings = file("localSettings.gradle.kts")
+if (localSettings.exists()) apply(from = localSettings)
