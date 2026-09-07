@@ -1,6 +1,7 @@
 package io.skein.cli
 
 import io.skein.classify.application.ClassificationService
+import io.skein.classify.application.ClassifierFactory
 import io.skein.classify.application.ClassifierKindEnum
 import io.skein.classify.application.HashingVectorizer
 import io.skein.classify.application.LoadedModel
@@ -9,12 +10,11 @@ import io.skein.classify.application.RecordMapper
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.HashingConfig
 import io.skein.classify.domain.Prediction
+import io.skein.classify.domain.PredictionFactory
 import io.skein.classify.domain.PrivacyModeEnum
 import io.skein.classify.domain.Record
 import io.skein.classify.domain.Schema
 import io.skein.classify.infrastructure.InMemoryFeatureStore
-import io.skein.classify.infrastructure.LogisticRegressionSgdClassifier
-import io.skein.classify.infrastructure.NaiveBayesClassifier
 import io.skein.classify.spi.Classifier
 import java.nio.file.Path
 
@@ -32,44 +32,51 @@ import java.nio.file.Path
  * changes — the basis of the scalable selection in [PoolSelector]. Both are thread-safe:
  * [HashingVectorizer] keeps per-thread scratch and the classifier scores a volatile snapshot, so the
  * same engine can vectorize/score many records concurrently (as long as nothing is learning).
+ *
+ * The schema, feature store and classifier are read back off [service] rather than duplicated here.
  */
 class CliEngine private constructor(
     val service: ClassificationService,
     val classifier: ClassifierKindEnum,
-    private val store: InMemoryFeatureStore,
-    private val schema: Schema,
     private val hashingConfig: HashingConfig,
-    private val classifierModel: Classifier,
 ) {
 
     private val vectorizer = HashingVectorizer(config = hashingConfig)
-    private val mapper = RecordMapper(schema = schema)
+    private val mapper = RecordMapper(schema = service.schema)
 
-    val labelColumn: String get() = schema.labelField.name
+    val labelColumn: String get() = service.schema.labelField.name
 
     /** Maps and hashes [record] into its sparse feature vector (the expensive, cacheable half). */
     fun vectorize(record: Record): FeatureVector {
         return vectorizer.vectorize(text = mapper.map(record = record).featureText)
     }
 
-    /** Scores an already-vectorized record against the current model (cheap, lock-free). */
+    /**
+     * Scores an already-vectorized record against the current model (cheap, lock-free), applying the
+     * engine's calibration so this agrees with `service.classify(record)`.
+     */
     fun classify(features: FeatureVector): Prediction {
-        return classifierModel.classify(features = features)
+        return PredictionFactory.fromLogScores(
+            logScores = service.classifier.logScores(features = features),
+            calibration = service.calibration,
+        )
     }
 
     /** True once the model has seen at least one labeled observation and can make predictions. */
     fun isTrained(): Boolean {
-        return classifierModel.labels().isNotEmpty()
+        return service.classifier.labels().isNotEmpty()
     }
 
     /** Writes the current model (schema, hashing key, classifier kind, observations) to [path]. */
     fun save(path: Path) {
         ModelStore.save(
             path = path,
-            schema = schema,
+            schema = service.schema,
             classifier = classifier,
             hashingConfig = hashingConfig,
-            observations = store.all(),
+            observations = service.featureStore.all(),
+            calibration = service.calibration,
+            hyperparameters = service.classifier.hyperparameters(),
         )
     }
 
@@ -77,15 +84,15 @@ class CliEngine private constructor(
 
         /** A new untrained engine for [schema] using [hashingConfig] and the chosen [classifier]. */
         fun fresh(schema: Schema, classifier: ClassifierKindEnum, hashingConfig: HashingConfig): CliEngine {
-            val store = InMemoryFeatureStore()
-            val model = classifierFor(kind = classifier)
             return CliEngine(
-                service = serviceFor(schema = schema, hashingConfig = hashingConfig, model = model, store = store),
+                service = serviceFor(
+                    schema = schema,
+                    hashingConfig = hashingConfig,
+                    model = ClassifierFactory.create(kind = classifier),
+                    store = InMemoryFeatureStore(),
+                ),
                 classifier = classifier,
-                store = store,
-                schema = schema,
                 hashingConfig = hashingConfig,
-                classifierModel = model,
             )
         }
 
@@ -98,22 +105,22 @@ class CliEngine private constructor(
         fun restore(model: LoadedModel, epochs: Int): CliEngine {
             val store = InMemoryFeatureStore()
             store.addAll(observations = model.observations)
-            val classifierModel = classifierFor(kind = model.classifier)
             val service = serviceFor(
                 schema = model.schema,
                 hashingConfig = model.hashingConfig,
-                model = classifierModel,
+                model = ClassifierFactory.create(
+                    kind = model.classifier,
+                    hyperparameters = model.hyperparameters,
+                ),
                 store = store,
             )
             val effectiveEpochs = if (model.classifier == ClassifierKindEnum.NAIVE_BAYES) 1 else epochs
             service.retrain(epochs = effectiveEpochs)
+            service.calibration = model.calibration
             return CliEngine(
                 service = service,
                 classifier = model.classifier,
-                store = store,
-                schema = model.schema,
                 hashingConfig = model.hashingConfig,
-                classifierModel = classifierModel,
             )
         }
 
@@ -130,13 +137,6 @@ class CliEngine private constructor(
                 classifier = model,
                 featureStore = store,
             )
-        }
-
-        private fun classifierFor(kind: ClassifierKindEnum): Classifier {
-            return when (kind) {
-                ClassifierKindEnum.NAIVE_BAYES -> NaiveBayesClassifier()
-                ClassifierKindEnum.LOGISTIC_REGRESSION -> LogisticRegressionSgdClassifier()
-            }
         }
     }
 }

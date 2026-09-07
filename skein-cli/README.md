@@ -17,6 +17,7 @@ it standalone without ever adding it to your own project's runtime classpath —
 | `label`   | Train on the rows that already have a label, then repeatedly surface the **most-uncertain** unlabeled rows for you to confirm or correct. Writes the enriched CSV and saves the model. |
 | `predict` | Load a saved model and classify every row of an input CSV (predicted label + confidence). |
 | `export`  | Convert a binary `.skein` model file to a human-readable text file for inspection. |
+| `evaluate`| Measure model quality — accuracy, per-class precision/recall/F1, a confusion matrix, top-k, log loss and calibration — with an optional `--min-accuracy` gate for CI. |
 
 ## Run it
 
@@ -161,6 +162,63 @@ tasks.register<JavaExec>("skeinLabel") {
 ```
 
 Then `./gradlew skeinLabel`. Nothing from `skein-cli` leaks into your shipped artifact.
+
+## `evaluate` — is the model any good?
+
+```bash
+skein evaluate --model model.skein --input labeled.csv          # score the SAVED model
+skein evaluate --model model.skein --folds 5                    # cross-validate the recipe
+skein evaluate --model model.skein --min-accuracy 0.80          # CI gate; exits 2 on failure
+```
+
+| Flag | Meaning |
+|---|---|
+| `--model <file>` | saved `.skein` model (required) |
+| `--input <csv>` | labeled CSV to score the saved model against. Mutually exclusive with `--folds`/`--test-ratio` |
+| `--folds <n>` | stratified k-fold over the stored observations, retraining per fold (n ≥ 2) |
+| `--test-ratio <r>` | stratified holdout over the stored observations (default 0.2) |
+| `--top-k <n>` | rank depth for top-k accuracy (default 3) |
+| `--bins <n>` | calibration bins (default 10) |
+| `--seed <n>` | split seed (default 42) |
+| `--epochs <n>` | training passes over a split or fold (default 5) |
+| `--out <file>` | also write the text report here |
+| `--csv <file>` | per-label metrics as CSV |
+| `--confusion <file>` | the full confusion matrix as CSV |
+| `--min-accuracy <r>` | exit 2 when accuracy falls below r |
+| `--delimiter <char>` | CSV field delimiter |
+
+A `.skein` file stores the **training** observations, so `--folds` and `--test-ratio` measure the
+recipe by retraining — not the saved model, which already saw every stored row. Only `--input`
+measures the saved model. The report header always says which mode ran, and there is deliberately no
+way to score a model against its own training rows.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | report produced; the quality gate passed or was not requested |
+| `1` | error — unknown or missing flag, missing model, unreadable or label-less input |
+| `2` | report produced, but `--min-accuracy` was not met |
+
+---
+
+## Abstaining in `predict`
+
+```bash
+skein predict --model model.skein --input in.csv --out out.csv --min-confidence 0.85
+```
+
+A row below the threshold is written with an **empty** label cell and its confidence intact. That is
+deliberate: `skein label` treats a blank label as pending, so piping the output back into `label`
+hand-labels exactly the rows the model refused.
+
+> `predict` overwrites the label column unconditionally, so any ground-truth label in the input is
+> replaced — and an abstained row blanks that cell. Keep your gold labels in a separate file.
+>
+> Thresholds are only meaningful against a **calibrated** model. Raw Naive Bayes confidences sit
+> near 0 and 1, so no threshold between them separates anything.
+
+---
 
 ## Persistence & privacy
 

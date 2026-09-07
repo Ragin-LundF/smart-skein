@@ -1,9 +1,12 @@
 package io.skein.classify.infrastructure
 
+import io.skein.classify.domain.Explanation
+import io.skein.classify.domain.FeatureContribution
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.Label
 import io.skein.classify.domain.Prediction
 import io.skein.classify.domain.PredictionFactory
+import kotlin.math.abs
 import kotlin.math.ln
 
 /**
@@ -41,12 +44,69 @@ internal class NaiveBayesSnapshot(
     }
 
     fun predict(features: FeatureVector): Prediction {
+        return PredictionFactory.fromLogScores(logScores = logScores(features = features))
+    }
+
+    /** Raw per-label log-likelihoods, before any softmax. */
+    fun logScores(features: FeatureVector): Map<Label, Double> {
         val effectiveVocabulary = vocabularySize.coerceAtLeast(minimumValue = 1)
         val logScores = HashMap<Label, Double>()
         for (label in labelDocumentCounts.keys) {
             logScores[label] = logScoreFor(label = label, features = features, vocabularySize = effectiveVocabulary)
         }
-        return PredictionFactory.fromLogScores(logScores = logScores)
+        return logScores
+    }
+
+    /**
+     * Decomposes [label]'s score into per-feature contributions, each centered on the mean across
+     * all labels.
+     *
+     * Centering is essential rather than cosmetic here: every Naive Bayes term is a log-probability
+     * and therefore negative, so ranking the raw terms would rank by "least negative" and surface
+     * whichever n-grams are commonest overall. Subtracting the mean turns each term into a log-odds
+     * ratio against the average label, so a feature equally likely under every label contributes
+     * exactly zero.
+     */
+    fun explain(features: FeatureVector, label: Label, limit: Int): Explanation {
+        val effectiveVocabulary = vocabularySize.coerceAtLeast(minimumValue = 1)
+        val labels = labelDocumentCounts.keys.toList()
+        val denominators = labels.associateWith { candidate ->
+            (featureMassByLabel[candidate] ?: 0.0) + smoothingAlpha * effectiveVocabulary
+        }
+        val base = ln(x = labelDocumentCounts.getValue(key = label).toDouble() / totalDocuments) -
+            labels.sumOf { candidate ->
+                ln(x = labelDocumentCounts.getValue(key = candidate).toDouble() / totalDocuments)
+            } / labels.size
+
+        var total = base
+        val contributions = ArrayList<FeatureContribution>(features.indices.size)
+        for (position in features.indices.indices) {
+            val index = features.indices[position]
+            val value = features.values[position].toDouble()
+            val termFor = { candidate: Label ->
+                val count = featureLookupByLabel[candidate]?.get(key = index) ?: 0.0
+                value * ln(x = (count + smoothingAlpha) / denominators.getValue(key = candidate))
+            }
+            val centered = termFor(label) - labels.sumOf { candidate -> termFor(candidate) } / labels.size
+            total += centered
+            contributions.add(
+                element = FeatureContribution(
+                    featureIndex = index,
+                    featureValue = features.values[position],
+                    contribution = centered,
+                ),
+            )
+        }
+        contributions.sortByDescending { contribution -> abs(x = contribution.contribution) }
+        return Explanation(
+            label = label,
+            probability = predict(features = features).alternatives
+                .first { scored -> scored.label == label }
+                .probability,
+            base = base,
+            total = total,
+            contributions = contributions.take(n = limit),
+        )
     }
 
     /** Returns a new snapshot with one observation added; [newVocabularySize] is the distinct-feature count. */

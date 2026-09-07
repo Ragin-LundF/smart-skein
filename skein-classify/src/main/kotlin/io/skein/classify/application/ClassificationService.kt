@@ -1,10 +1,14 @@
 package io.skein.classify.application
 
+import io.skein.classify.domain.AttributionModeEnum
+import io.skein.classify.domain.Calibration
 import io.skein.classify.domain.ClassificationMetrics
+import io.skein.classify.domain.Explanation
 import io.skein.classify.domain.HashingConfig
 import io.skein.classify.domain.Label
 import io.skein.classify.domain.LabeledFeatures
 import io.skein.classify.domain.Prediction
+import io.skein.classify.domain.PredictionFactory
 import io.skein.classify.domain.PrivacyModeEnum
 import io.skein.classify.domain.Record
 import io.skein.classify.domain.Schema
@@ -14,9 +18,17 @@ import io.skein.classify.spi.Classifier
 import io.skein.classify.spi.FeatureStore
 import kotlin.random.Random
 
+/** Contributions returned by [ClassificationService.explain] unless the caller asks for more. */
+private const val DEFAULT_EXPLANATION_LIMIT = 10
+
 /**
  * Orchestrates classification for one schema: maps records, vectorizes their feature text, and
  * drives a [Classifier] and a [FeatureStore]. One engine = one schema = one model.
+ *
+ * [schema], [classifier] and [featureStore] are exposed as read-only views so evaluation and
+ * persistence can reach the model without this class growing those responsibilities. [mapper] and
+ * the vectorizer stay private — they are the implementation of the record-to-features path rather
+ * than collaborators the caller supplied.
  *
  * [privacyMode] is required (no default) and is a public, deliberate choice. In [FeatureStore]s
  * that only retain features (the in-memory default), both modes behave identically — the
@@ -24,11 +36,11 @@ import kotlin.random.Random
  * supports encryption (see `skein-store-postgres`).
  */
 class ClassificationService(
-    schema: Schema,
+    val schema: Schema,
     val privacyMode: PrivacyModeEnum,
     hashingConfig: HashingConfig,
-    private val classifier: Classifier = NaiveBayesClassifier(),
-    private val featureStore: FeatureStore = InMemoryFeatureStore(),
+    val classifier: Classifier = NaiveBayesClassifier(),
+    val featureStore: FeatureStore = InMemoryFeatureStore(),
     private val mapper: RecordMapper = RecordMapper(schema),
 ) {
 
@@ -61,10 +73,87 @@ class ClassificationService(
         learnLabeled(featureText = mapper.map(record = record).featureText, label = correctLabel)
     }
 
-    /** Predicts the label of a record. */
+    /**
+     * Probability calibration applied to every [classify]. Defaults to [Calibration.NONE], so
+     * predictions are bit-identical to an uncalibrated engine until this is set. Fit it with
+     * [fitCalibration], or with [TemperatureCalibrator] directly, on data the model has **not**
+     * learned from.
+     *
+     * Deliberately a mutable property rather than a constructor parameter, so the existing
+     * constructor signature is untouched. Volatile because classification is lock-free and
+     * concurrent, matching how the classifiers publish their snapshots.
+     */
+    @Volatile
+    var calibration: Calibration = Calibration.NONE
+
+    /** Predicts the label of a record, with [calibration] applied. */
     fun classify(record: Record): Prediction {
         val features = vectorizer.vectorize(text = mapper.map(record = record).featureText)
-        return classifier.classify(features = features)
+        return PredictionFactory.fromLogScores(
+            logScores = classifier.logScores(features = features),
+            calibration = calibration,
+        )
+    }
+
+    /**
+     * [classify], or `null` when the winning label's calibrated confidence falls below
+     * [minConfidence] — the abstain path for callers that would rather return nothing than guess.
+     */
+    fun classifyOrNull(record: Record, minConfidence: Double): Prediction? {
+        val prediction = classify(record = record)
+        return if (prediction.isConfident(minConfidence = minConfidence)) prediction else null
+    }
+
+    /**
+     * Why the model chose the label it did for [record]: the ranked per-feature contributions behind
+     * the winning label, carrying the **calibrated** probability so an explanation always agrees
+     * with [classify].
+     *
+     * Returns `null` when the configured classifier cannot attribute its score (see
+     * [io.skein.classify.spi.Classifier.explain]).
+     *
+     * [mode] defaults to [AttributionModeEnum.BUCKETS_ONLY], which reveals no text.
+     * [AttributionModeEnum.WITH_NGRAMS] additionally resolves each bucket to a representative
+     * n-gram of this record — read that enum's note before using it.
+     *
+     * ponytail: costs one score lookup per label per non-zero feature, so it is fine interactively
+     * or per reviewed row, and wrong inside a batch loop over millions of records. Upgrade path:
+     * batch the per-label term lookups.
+     */
+    fun explain(
+        record: Record,
+        limit: Int = DEFAULT_EXPLANATION_LIMIT,
+        mode: AttributionModeEnum = AttributionModeEnum.BUCKETS_ONLY,
+    ): Explanation? {
+        val featureText = mapper.map(record = record).featureText
+        val features = vectorizer.vectorize(text = featureText)
+        val prediction = PredictionFactory.fromLogScores(
+            logScores = classifier.logScores(features = features),
+            calibration = calibration,
+        )
+        val explanation = classifier.explain(features = features, label = prediction.label, limit = limit)
+            ?: return null
+        val calibrated = explanation.copy(probability = prediction.confidence)
+        if (mode == AttributionModeEnum.BUCKETS_ONLY) {
+            return calibrated
+        }
+        val ngrams = vectorizer.ngramsByBucket(text = featureText)
+        return calibrated.copy(
+            contributions = calibrated.contributions.map { contribution ->
+                contribution.copy(ngram = ngrams[contribution.featureIndex])
+            },
+        )
+    }
+
+    /**
+     * Fits a temperature on [heldOut] and installs it as [calibration], returning what was fitted.
+     *
+     * [heldOut] must be disjoint from what this engine learned from; see [TemperatureCalibrator].
+     */
+    fun fitCalibration(heldOut: List<LabeledFeatures>): Calibration {
+        val fitted = TemperatureCalibrator().fit(heldOut = heldOut, classifier = classifier)
+        calibration = fitted
+        return fitted
     }
 
     /** Reports total observations and per-label counts learned so far. */

@@ -1,9 +1,14 @@
 package io.skein.examples.crf
 
 import io.skein.extract.domain.Tag
+import io.skein.extract.infrastructure.CrfModelStore
 import io.skein.extract.infrastructure.CrfSequenceLabeler
+import io.skein.extract.infrastructure.FeatureRetentionEnum
 import io.skein.text.application.TypedTokenizer
 import io.skein.text.domain.Token
+import java.nio.file.Files
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.fileSize
 
 private const val TOKEN_COL_WIDTH = 30
 private const val TYPE_COL_WIDTH = 14
@@ -87,4 +92,55 @@ fun runCrfTaggerExample() {
     println("CRF generalizes via feature weights (token type, prefix, suffix, neighbours)")
     println("not by memorizing exact token strings — so new IBAN formats are tagged correctly.")
     println()
+
+    demonstratePersistence(labeler = labeler, tokenizer = tokenizer, probe = variationTokens)
+}
+
+/** Saves the trained tagger, reloads it, proves the tagging survives, and resumes training. */
+private fun demonstratePersistence(labeler: CrfSequenceLabeler, tokenizer: TypedTokenizer, probe: List<Token>) {
+    println("--- Persist and resume ---")
+    val modelFile = Files.createTempFile("skein-crf-example", ".skeincrf")
+    try {
+        CrfModelStore.save(
+            path = modelFile,
+            snapshot = labeler.snapshot(),
+            retention = FeatureRetentionEnum.ALL_FEATURES,
+        )
+        val metadata = CrfModelStore.metadata(path = modelFile)
+        println("Saved ${modelFile.fileSize()} bytes")
+        println("  format      SKCR v${metadata.formatMajor}.${metadata.formatMinor}")
+        println("  retention   ${metadata.retention}")
+        println("  written by  ${metadata.writerVersion}")
+        println()
+
+        val restored = CrfSequenceLabeler.from(snapshot = CrfModelStore.load(path = modelFile))
+        val before = labeler.label(tokens = probe)
+        val after = restored.label(tokens = probe)
+        println("Reloaded model tags identically: ${before == after}")
+        println()
+
+        // Training continues from the saved step rather than restarting.
+        val stepBefore = restored.snapshot().step
+        val extraTokens = tokenizer.tokenize(text = "IBAN AT611904300234573201 Amount 42.00 USD")
+        restored.learn(
+            tokens = extraTokens,
+            tags = listOf(TAG_KEY, TAG_VALUE, TAG_KEY, TAG_VALUE, TAG_OTHER),
+        )
+        println("Resumed training: step $stepBefore -> ${restored.snapshot().step}")
+        println()
+
+        CrfModelStore.save(
+            path = modelFile,
+            snapshot = restored.snapshot(),
+            retention = FeatureRetentionEnum.STRUCTURAL_ONLY,
+        )
+        println("Saved again with STRUCTURAL_ONLY: ${modelFile.fileSize()} bytes.")
+        println("That mode writes no raw token text at all — the only zero-clear-text guarantee —")
+        println("at the cost of the word-shape generalization demonstrated above. The default,")
+        println("FREQUENT_ONLY, keeps text seen more than once, so it reduces exposure without")
+        println("eliminating it.")
+        println()
+    } finally {
+        modelFile.deleteIfExists()
+    }
 }

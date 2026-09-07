@@ -5,6 +5,7 @@ import io.skein.examples.cli.runCliDemoExample
 import io.skein.examples.cli.runCliToolDemoExample
 import io.skein.examples.clustering.runTemplateClustererExample
 import io.skein.examples.crf.runCrfTaggerExample
+import io.skein.examples.explain.runExplainAndCalibrateExample
 import io.skein.examples.importing.runRecordImportExample
 import io.skein.examples.logwatch.logWatchMain
 import io.skein.examples.patternmatching.runTokenPatternExample
@@ -39,7 +40,9 @@ private val USAGE = """
     Use cases (Priority 2 — intermediate workflows):
       regression        Naive Bayes → Logistic Regression retraining, confidence comparison.
       activelearning    ActiveLearningSelector: pick uncertain candidates, feedback, metrics.
-      crf               CrfSequenceLabeler: train on token sequences, generalize to unseen input.
+      crf               CrfSequenceLabeler: train on token sequences, generalize to unseen input,
+                        then save, reload and resume training via CrfModelStore.
+      explain           Calibrate confidences, abstain on low confidence, and explain a prediction.
       clidemo           Schema inference + active learning loop with equivalent CLI command hints.
       tokenization      WHITESPACE vs PUNCTUATION_AWARE mode comparison.
       customtokens      Custom TokenPatternConfig with a domain order-code recognizer.
@@ -70,6 +73,7 @@ private val DISPATCH: Map<String, () -> Unit> = mapOf(
     "regression" to ::runLogisticRegressionExample,
     "activelearning" to ::runActiveLearningExample,
     "crf" to ::runCrfTaggerExample,
+    "explain" to ::runExplainAndCalibrateExample,
     "clidemo" to ::runCliDemoExample,
     "tokenization" to ::runTokenizationModesExample,
     "customtokens" to ::runCustomTokenPatternsExample,

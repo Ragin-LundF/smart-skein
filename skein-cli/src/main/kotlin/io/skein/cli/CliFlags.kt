@@ -8,8 +8,12 @@ internal val LABEL_FLAGS = setOf(
     "input", "label-col", "out", "model", "classifier",
     "budget", "batch", "strategy", "epochs", "key", "scan-limit", "delimiter",
 )
-internal val PREDICT_FLAGS = setOf("input", "model", "out", "epochs", "delimiter")
+internal val PREDICT_FLAGS = setOf("input", "model", "out", "epochs", "delimiter", "min-confidence")
 internal val EXPORT_FLAGS = setOf("model", "out")
+internal val EVALUATE_FLAGS = setOf(
+    "model", "input", "folds", "test-ratio", "top-k", "bins",
+    "seed", "epochs", "out", "csv", "confusion", "min-accuracy", "delimiter",
+)
 
 /** Parses `--name value` tokens into a map. Rejects a token that is not a `--flag` or has no value. */
 internal fun parseFlags(tokens: List<String>): Map<String, String> {
@@ -75,4 +79,38 @@ internal fun parseKey(value: String?): HashingConfig? {
     val parts = value.split(",")
     require(value = parts.size == 2) { "--key must be '<key0>,<key1>'" }
     return HashingConfig(key0 = parts[0].trim().toLong(), key1 = parts[1].trim().toLong())
+}
+
+/** Parses a fraction that must lie strictly inside `0..1`, such as a holdout ratio. */
+internal fun parseRatio(name: String, value: String?, default: Double): Double {
+    if (value == null) {
+        return default
+    }
+    val parsed = value.toDoubleOrNull()
+    require(value = parsed != null && parsed > 0.0 && parsed < 1.0) {
+        "--$name must be a number between 0 and 1 exclusive, got '$value'"
+    }
+    return parsed
+}
+
+/** Parses a count that must be at least one. */
+internal fun parsePositiveInt(name: String, value: String?, default: Int): Int {
+    if (value == null) {
+        return default
+    }
+    val parsed = value.toIntOrNull()
+    require(value = parsed != null && parsed >= 1) { "--$name must be a positive integer, got '$value'" }
+    return parsed
+}
+
+/** Parses a probability threshold in `0..1` inclusive, or `null` when the flag is absent. */
+internal fun parseAccuracyGate(value: String?): Double? {
+    if (value == null) {
+        return null
+    }
+    val parsed = value.toDoubleOrNull()
+    require(value = parsed != null && parsed in 0.0..1.0) {
+        "--min-accuracy must be a number in 0.0..1.0, got '$value'"
+    }
+    return parsed
 }

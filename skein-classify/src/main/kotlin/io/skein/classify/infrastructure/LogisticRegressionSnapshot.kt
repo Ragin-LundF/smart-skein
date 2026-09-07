@@ -1,9 +1,12 @@
 package io.skein.classify.infrastructure
 
+import io.skein.classify.domain.Explanation
+import io.skein.classify.domain.FeatureContribution
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.Label
 import io.skein.classify.domain.Prediction
 import io.skein.classify.domain.PredictionFactory
+import kotlin.math.abs
 
 /**
  * Immutable trained state of [LogisticRegressionSgdClassifier] — per-label sparse weights and bias.
@@ -35,11 +38,57 @@ internal class LogisticRegressionSnapshot(
     }
 
     fun predict(features: FeatureVector): Prediction {
+        return PredictionFactory.fromLogScores(logScores = logScores(features = features))
+    }
+
+    /** Raw per-label logits, before any softmax. */
+    fun logScores(features: FeatureVector): Map<Label, Double> {
         val logits = HashMap<Label, Double>()
         for (label in weightsByLabel.keys) {
             logits[label] = scoreFor(label = label, features = features)
         }
-        return PredictionFactory.fromLogScores(logScores = logits)
+        return logits
+    }
+
+    /**
+     * Decomposes [label]'s logit into per-feature contributions, each centered on the mean across
+     * all labels. Centering removes the component of a weight that is shared by every label, so a
+     * feature that pushes all labels equally contributes zero. The same shape as the Naive Bayes
+     * decomposition, with `w * x` in place of the log-likelihood term.
+     */
+    fun explain(features: FeatureVector, label: Label, limit: Int): Explanation {
+        val labels = weightsByLabel.keys.toList()
+        val base = (biasByLabel[label] ?: 0.0) -
+            labels.sumOf { candidate -> biasByLabel[candidate] ?: 0.0 } / labels.size
+
+        var total = base
+        val contributions = ArrayList<FeatureContribution>(features.indices.size)
+        for (position in features.indices.indices) {
+            val index = features.indices[position]
+            val value = features.values[position].toDouble()
+            val termFor = { candidate: Label ->
+                (weightLookupByLabel[candidate]?.get(key = index) ?: 0.0) * value
+            }
+            val centered = termFor(label) - labels.sumOf { candidate -> termFor(candidate) } / labels.size
+            total += centered
+            contributions.add(
+                element = FeatureContribution(
+                    featureIndex = index,
+                    featureValue = features.values[position],
+                    contribution = centered,
+                ),
+            )
+        }
+        contributions.sortByDescending { contribution -> abs(x = contribution.contribution) }
+        return Explanation(
+            label = label,
+            probability = predict(features = features).alternatives
+                .first { scored -> scored.label == label }
+                .probability,
+            base = base,
+            total = total,
+            contributions = contributions.take(n = limit),
+        )
     }
 
     private fun scoreFor(label: Label, features: FeatureVector): Double {

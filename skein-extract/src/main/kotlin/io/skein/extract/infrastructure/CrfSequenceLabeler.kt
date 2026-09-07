@@ -31,6 +31,12 @@ class CrfSequenceLabeler(
     private var step = 0L
     private var currentLearningRate = DEFAULT_LEARNING_RATE
 
+    // How often each feature string was observed during training. Used only when saving a model, to
+    // drop rare lexical features that are more likely to be personal data than vocabulary.
+    // ponytail: one Int per distinct feature, never evicted, so it grows with the vocabulary.
+    // Upgrade path: a count-min sketch, or counting only the `word=` features.
+    private val featureCounts = HashMap<String, Int>()
+
     override fun learn(tokens: List<Token>, tags: List<Tag>) {
         require(value = tokens.size == tags.size) { "tokens and tags must align in length" }
         if (tokens.isEmpty()) {
@@ -39,6 +45,7 @@ class CrfSequenceLabeler(
         tags.forEach { tag -> registerTag(tag = tag) }
         currentLearningRate = initialLearningRate / (1.0 + decayRate * step)
         val features = extractFeatures(tokens = tokens)
+        countFeatures(features = features)
         val alpha = forwardScores(features = features)
         val beta = backwardScores(features = features)
         val logZ = logSumExp(values = alpha.last())
@@ -53,6 +60,15 @@ class CrfSequenceLabeler(
             return emptyList()
         }
         return viterbi(features = extractFeatures(tokens = tokens))
+    }
+
+    /** Tallies feature occurrences for the save-time retention filter. Never affects scoring. */
+    private fun countFeatures(features: List<List<String>>) {
+        features.forEach { perToken ->
+            perToken.forEach { feature ->
+                featureCounts[feature] = (featureCounts[feature] ?: 0) + 1
+            }
+        }
     }
 
     private fun registerTag(tag: Tag) {
@@ -71,12 +87,12 @@ class CrfSequenceLabeler(
         val previousType = if (position > 0) tokens[position - 1].type.name else BOUNDARY
         val nextType = if (position < tokens.lastIndex) tokens[position + 1].type.name else BOUNDARY
         return listOf(
-            "type=${token.type.name}",
-            "word=$text",
-            "prefix=${text.take(n = AFFIX_LENGTH)}",
-            "suffix=${text.takeLast(n = AFFIX_LENGTH)}",
-            "prevType=$previousType",
-            "nextType=$nextType",
+            "$TYPE_PREFIX${token.type.name}",
+            "$WORD_PREFIX$text",
+            "$PREFIX_PREFIX${text.take(n = AFFIX_LENGTH)}",
+            "$SUFFIX_PREFIX${text.takeLast(n = AFFIX_LENGTH)}",
+            "$PREV_TYPE_PREFIX$previousType",
+            "$NEXT_TYPE_PREFIX$nextType",
         )
     }
 
@@ -233,33 +249,111 @@ class CrfSequenceLabeler(
         return tagIndices.map { index -> tagOrder[index] }
     }
 
-    private fun indexOfMax(scores: DoubleArray): Int {
-        var bestIndex = 0
-        for (index in scores.indices) {
-            if (scores[index] > scores[bestIndex]) {
-                bestIndex = index
+    /**
+     * Captures everything needed to restore this labeler, as defensive copies — a snapshot taken
+     * while training continues is not mutated by later [learn] calls.
+     *
+     * `currentLearningRate` is deliberately absent: it is recomputed from the initial rate, the
+     * decay rate and [step] on every [learn], so persisting those three restores it exactly, and
+     * storing it as well would create a second source of truth that could contradict them.
+     */
+    fun snapshot(): CrfModelSnapshot {
+        return CrfModelSnapshot(
+            tagOrder = tagOrder.toList(),
+            startWeights = startWeights.toMap(),
+            transitionWeights = transitionWeights.toMap(),
+            stateWeights = stateWeights.toMap(),
+            featureCounts = featureCounts.toMap(),
+            initialLearningRate = initialLearningRate,
+            decayRate = decayRate,
+            l2Regularization = l2Regularization,
+            step = step,
+        )
+    }
+
+    companion object {
+
+        /**
+         * Rebuilds a labeler from [snapshot], including its hyperparameters and training progress,
+         * so training can continue exactly where it stopped.
+         *
+         * A factory rather than an instance `restore`: restoring into a labeler constructed with
+         * different hyperparameters would produce an object whose constructor arguments contradict
+         * its own state.
+         */
+        fun from(snapshot: CrfModelSnapshot): CrfSequenceLabeler {
+            require(value = snapshot.tagOrder.isNotEmpty()) { "a snapshot must carry at least one tag" }
+            require(value = snapshot.tagOrder.toSet().size == snapshot.tagOrder.size) {
+                "a snapshot must not repeat a tag"
             }
-        }
-        return bestIndex
-    }
+            require(value = snapshot.step >= 0L) { "step must not be negative" }
+            val known = snapshot.tagOrder.toSet()
+            snapshot.startWeights.keys.forEach { tag ->
+                require(value = tag in known) { "start weight references unknown tag '${tag.value}'" }
+            }
+            snapshot.transitionWeights.keys.forEach { (from, to) ->
+                require(value = from in known && to in known) { "transition references an unknown tag" }
+            }
+            snapshot.stateWeights.keys.forEach { (tag, _) ->
+                require(value = tag in known) { "state weight references unknown tag '${tag.value}'" }
+            }
 
-    private fun logSumExp(values: DoubleArray): Double {
-        val max = values.max()
-        if (max == Double.NEGATIVE_INFINITY) {
-            return max
+            val labeler = CrfSequenceLabeler(
+                initialLearningRate = snapshot.initialLearningRate,
+                decayRate = snapshot.decayRate,
+                l2Regularization = snapshot.l2Regularization,
+            )
+            snapshot.tagOrder.forEach { tag -> labeler.registerTag(tag = tag) }
+            labeler.startWeights.putAll(snapshot.startWeights)
+            labeler.transitionWeights.putAll(snapshot.transitionWeights)
+            labeler.stateWeights.putAll(snapshot.stateWeights)
+            labeler.featureCounts.putAll(snapshot.featureCounts)
+            labeler.step = snapshot.step
+            return labeler
         }
-        var sum = 0.0
-        for (value in values) {
-            sum += exp(x = value - max)
-        }
-        return max + ln(x = sum)
-    }
 
-    private companion object {
-        const val DEFAULT_LEARNING_RATE = 0.1
-        const val DEFAULT_DECAY_RATE = 0.0
-        const val DEFAULT_L2_REGULARIZATION = 0.0
-        const val AFFIX_LENGTH = 3
-        const val BOUNDARY = "^"
+        /** Index of the largest score, ties resolved toward the lowest index. */
+        private fun indexOfMax(scores: DoubleArray): Int {
+            var bestIndex = 0
+            for (index in scores.indices) {
+                if (scores[index] > scores[bestIndex]) {
+                    bestIndex = index
+                }
+            }
+            return bestIndex
+        }
+
+        /** Numerically stable `ln(sum(exp(values)))`. */
+        private fun logSumExp(values: DoubleArray): Double {
+            val max = values.max()
+            if (max == Double.NEGATIVE_INFINITY) {
+                return max
+            }
+            var sum = 0.0
+            for (value in values) {
+                sum += exp(x = value - max)
+            }
+            return max + ln(x = sum)
+        }
+
+        private const val DEFAULT_LEARNING_RATE = 0.1
+        private const val DEFAULT_DECAY_RATE = 0.0
+        private const val DEFAULT_L2_REGULARIZATION = 0.0
+        private const val AFFIX_LENGTH = 3
+        private const val BOUNDARY = "^"
+
+        internal const val TYPE_PREFIX = "type="
+        internal const val WORD_PREFIX = "word="
+        internal const val PREFIX_PREFIX = "prefix="
+        internal const val SUFFIX_PREFIX = "suffix="
+        internal const val PREV_TYPE_PREFIX = "prevType="
+        internal const val NEXT_TYPE_PREFIX = "nextType="
+
+        /**
+         * Feature prefixes whose values are raw training text. The single source of truth for the
+         * save-time privacy filter — adding a lexical feature without listing it here would let that
+         * text reach disk in a mode that promises otherwise.
+         */
+        internal val LEXICAL_FEATURE_PREFIXES = listOf(WORD_PREFIX, PREFIX_PREFIX, SUFFIX_PREFIX)
     }
 }

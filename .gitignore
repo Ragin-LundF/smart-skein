@@ -31,3 +31,4 @@ ragin_*.pgp
 *.gpg
 *.skein
 skein-demo
+localSettings.gradle.kts
