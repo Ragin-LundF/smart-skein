@@ -76,6 +76,7 @@ class CliEngine private constructor(
             hashingConfig = hashingConfig,
             observations = service.featureStore.all(),
             calibration = service.calibration,
+            hyperparameters = service.classifier.hyperparameters(),
         )
     }
 
@@ -107,7 +108,10 @@ class CliEngine private constructor(
             val service = serviceFor(
                 schema = model.schema,
                 hashingConfig = model.hashingConfig,
-                model = ClassifierFactory.create(kind = model.classifier),
+                model = ClassifierFactory.create(
+                    kind = model.classifier,
+                    hyperparameters = model.hyperparameters,
+                ),
                 store = store,
             )
             val effectiveEpochs = if (model.classifier == ClassifierKindEnum.NAIVE_BAYES) 1 else epochs

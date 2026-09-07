@@ -29,6 +29,9 @@ All notable changes to this project will be documented in this file.
   feature equally likely under every label contributes zero. Buckets stay opaque by default;
   `AttributionModeEnum.WITH_NGRAMS` resolves them to source fragments, re-derived on the call with
   no stored index.
+- **Classifier hyperparameters are persisted** — `ClassifierHyperparameters` records a classifier's
+  tuning, `Classifier.hyperparameters()` reports it, and `ModelStore` stores it so a tuned model is
+  restored as the same model. `ClassifierFactory.create(kind, hyperparameters)` rebuilds it.
 - **CRF model persistence** (`skein-extract`) — `CrfModelStore` saves and loads a trained
   `CrfSequenceLabeler` as a single versioned `SKCR` file, with no new dependencies. Hyperparameters
   and the SGD step counter are persisted, so training resumes exactly where it stopped rather than
@@ -45,6 +48,8 @@ All notable changes to this project will be documented in this file.
   models — **third-party classifiers should override `logScores`.**
 - `ModelStore.load` now reports a truncated or corrupt file as an `IllegalArgumentException` instead
   of leaking a raw `EOFException`.
+- `Classifier` also gains `hyperparameters()`, with a default reporting the library values, so
+  existing implementations keep compiling and linking.
 
 ### Security
 
@@ -55,14 +60,27 @@ All notable changes to this project will be documented in this file.
   `FeatureRetentionEnum.STRUCTURAL_ONLY` carries a zero-clear-text guarantee, and only
   `ALL_FEATURES` restores a bit-identical model.
 
+### Fixed
+
+- **A tuned model no longer changes when saved and reloaded.** `ModelStore` recorded no classifier
+  hyperparameters, and loading replays the stored observations through a freshly built classifier —
+  so a logistic-regression model trained with, say, `initialLearningRate = 0.9, decayRate = 0.5,
+  l2Regularization = 0.3` came back with the library defaults and predicted differently (0.7397
+  versus 0.6731 on the regression case now covered by a test).
+- **`HashingVectorizer` no longer throws on long input.** Its UTF-8 encode buffer and word-boundary
+  buffer were fixed 256-element arrays, so a record with more than 128 words, or a word n-gram
+  exceeding 256 UTF-8 bytes, raised `ArrayIndexOutOfBoundsException`. Both now grow on demand;
+  an outlier record uses a one-off buffer rather than permanently inflating per-thread memory. The
+  capacity check is per call, not per n-gram, so the hot path is unchanged.
+
 ### Breaking
 
 - **Model file format.** `.skein` files are now written at version 2 (the calibration temperature was
   appended). Version 2 readers accept both v1 and v2 files, but **a 1.1.0 reader rejects a 1.2.0
   file**, because its version check is an exact match.
-- `LoadedModel` gains a fifth property, `calibration`. Its getters and `component1..4` are unchanged,
-  so reading a loaded model is unaffected, but the four-argument constructor and the old `copy`
-  signature are gone.
+- `LoadedModel` gains `calibration` and `hyperparameters`. Its getters and `component1..4` are
+  unchanged, so reading a loaded model is unaffected, but the four-argument constructor and the old
+  `copy` signature are gone.
 - `skein-cli export` writes a `skein-model 2` header with an added `calibration` line.
 
 ## [1.1.0] - 2026-06-28

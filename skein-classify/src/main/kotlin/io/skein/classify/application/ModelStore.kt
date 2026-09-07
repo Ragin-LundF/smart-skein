@@ -4,6 +4,7 @@ package io.skein.classify.application
 
 import io.skein.classify.domain.Calibration
 import io.skein.classify.domain.CategoricalField
+import io.skein.classify.domain.ClassifierHyperparameters
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.HashingConfig
 import io.skein.classify.domain.IdentifierField
@@ -56,6 +57,12 @@ private data class SkeinModelDto(
     val observations: List<ObservationDto>,
     // Appended in v2; a v1 file omits it and decodes to this default.
     val calibrationTemperature: Double = UNCALIBRATED_TEMPERATURE,
+    // Also appended in v2. Without these, a tuned model is replayed through a default-constructed
+    // classifier on load and comes back as a different model.
+    val smoothingAlpha: Double = ClassifierHyperparameters.DEFAULT_SMOOTHING_ALPHA,
+    val initialLearningRate: Double = ClassifierHyperparameters.DEFAULT_LEARNING_RATE,
+    val decayRate: Double = ClassifierHyperparameters.DEFAULT_DECAY_RATE,
+    val l2Regularization: Double = ClassifierHyperparameters.DEFAULT_L2_REGULARIZATION,
 )
 
 @Serializable
@@ -67,8 +74,8 @@ private class ObservationDto(val label: String, val indices: IntArray, val value
 object ModelStore {
 
     /**
-     * Writes a model without calibration. Retained as its own overload so callers compiled against
-     * the five-argument form keep linking.
+     * Writes a model with no calibration and default hyperparameters. Retained as its own overload
+     * so callers compiled against the five-argument form keep linking.
      */
     fun save(
         path: Path,
@@ -87,6 +94,25 @@ object ModelStore {
         )
     }
 
+    /**
+     * Writes a model.
+     *
+     * [classifier] names the *kind* of model, so this cannot discover how the classifier was tuned —
+     * pass [hyperparameters] to preserve it. A tuned model saved without them is replayed through a
+     * default-constructed classifier on load and comes back behaving differently:
+     *
+     * ```kotlin
+     * ModelStore.save(
+     *     path = path,
+     *     schema = engine.schema,
+     *     classifier = ClassifierKindEnum.LOGISTIC_REGRESSION,
+     *     hashingConfig = hashingConfig,
+     *     observations = engine.featureStore.all(),
+     *     calibration = engine.calibration,
+     *     hyperparameters = engine.classifier.hyperparameters(),
+     * )
+     * ```
+     */
     fun save(
         path: Path,
         schema: Schema,
@@ -94,6 +120,7 @@ object ModelStore {
         hashingConfig: HashingConfig,
         observations: List<LabeledFeatures>,
         calibration: Calibration,
+        hyperparameters: ClassifierHyperparameters = ClassifierHyperparameters.DEFAULTS,
     ) {
         val dto = SkeinModelDto(
             classifier = classifier.ordinal,
@@ -125,6 +152,10 @@ object ModelStore {
                 )
             },
             calibrationTemperature = calibration.temperature,
+            smoothingAlpha = hyperparameters.smoothingAlpha,
+            initialLearningRate = hyperparameters.initialLearningRate,
+            decayRate = hyperparameters.decayRate,
+            l2Regularization = hyperparameters.l2Regularization,
         )
         val encoded = ProtoBuf.encodeToByteArray(serializer = SkeinModelDto.serializer(), value = dto)
         path.outputStream().use { file ->
@@ -189,6 +220,12 @@ object ModelStore {
                 )
             },
             calibration = Calibration(temperature = dto.calibrationTemperature),
+            hyperparameters = ClassifierHyperparameters(
+                smoothingAlpha = dto.smoothingAlpha,
+                initialLearningRate = dto.initialLearningRate,
+                decayRate = dto.decayRate,
+                l2Regularization = dto.l2Regularization,
+            ),
         )
     }
 }

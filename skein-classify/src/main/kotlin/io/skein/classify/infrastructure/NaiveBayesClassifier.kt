@@ -1,5 +1,6 @@
 package io.skein.classify.infrastructure
 
+import io.skein.classify.domain.ClassifierHyperparameters
 import io.skein.classify.domain.Explanation
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.Label
@@ -20,7 +21,9 @@ import kotlin.jvm.Volatile
  * publishes a new snapshot (copy-on-write), so a `classify` running concurrently with training sees
  * a consistent prior-or-next snapshot, never a torn one.
  */
-class NaiveBayesClassifier(private val smoothingAlpha: Double = DEFAULT_SMOOTHING_ALPHA) : Classifier {
+class NaiveBayesClassifier(
+    private val smoothingAlpha: Double = ClassifierHyperparameters.DEFAULT_SMOOTHING_ALPHA,
+) : Classifier {
 
     @Volatile
     private var snapshot = NaiveBayesSnapshot.empty(smoothingAlpha = smoothingAlpha)
@@ -94,6 +97,10 @@ class NaiveBayesClassifier(private val smoothingAlpha: Double = DEFAULT_SMOOTHIN
         return current.explain(features = features, label = label, limit = limit)
     }
 
+    override fun hyperparameters(): ClassifierHyperparameters {
+        return ClassifierHyperparameters(smoothingAlpha = smoothingAlpha)
+    }
+
     override fun labels(): Set<Label> {
         return snapshot.labels().toSet()
     }
@@ -105,7 +112,4 @@ class NaiveBayesClassifier(private val smoothingAlpha: Double = DEFAULT_SMOOTHIN
         }
     }
 
-    private companion object {
-        const val DEFAULT_SMOOTHING_ALPHA = 1.0
-    }
 }

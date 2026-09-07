@@ -3,6 +3,7 @@ package io.skein.classify.spi
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.Label
 import io.skein.classify.domain.LabeledFeatures
+import io.skein.classify.domain.ClassifierHyperparameters
 import io.skein.classify.domain.Explanation
 import io.skein.classify.domain.Prediction
 import kotlin.math.ln
@@ -60,6 +61,15 @@ interface Classifier {
      */
     fun explain(features: FeatureVector, label: Label, limit: Int): Explanation? {
         return null
+    }
+
+    /**
+     * The tuning this classifier was constructed with, so it can be persisted with a model and
+     * restored alongside it. The default reports [ClassifierHyperparameters.DEFAULTS]; both
+     * classifiers shipped here override it.
+     */
+    fun hyperparameters(): ClassifierHyperparameters {
+        return ClassifierHyperparameters.DEFAULTS
     }
 
     /** Discards all learned state. */

@@ -4,6 +4,7 @@ import io.skein.classify.domain.HashingConfig
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Pins the exact hashed output of [HashingVectorizer] for a fixed key and input.
@@ -55,5 +56,50 @@ internal class HashingVectorizerGoldenTest {
 
         assertContentEquals(expected = vector.indices.sortedArray(), actual = vector.indices)
         assertEquals(expected = vector.indices.size, actual = vector.indices.toSet().size)
+    }
+
+    @Test
+    internal fun `handles a record with far more words than the default buffer holds`() {
+        // The boundary buffer holds two entries per word, so 200 words needs 400 — well past the
+        // 256-entry default. This used to throw ArrayIndexOutOfBoundsException.
+        val text = (1..200).joinToString(separator = " ") { index -> "word$index" }
+        val vector = vectorizer.vectorize(text = text)
+
+        assertTrue(actual = vector.indices.isNotEmpty())
+        assertContentEquals(expected = vector.indices.sortedArray(), actual = vector.indices)
+    }
+
+    @Test
+    internal fun `handles words longer than the default encode buffer`() {
+        // Two 300-character words joined into one word bigram exceed 256 bytes of UTF-8.
+        val text = "a".repeat(n = 300) + " " + "b".repeat(n = 300)
+        val vector = vectorizer.vectorize(text = text)
+
+        assertTrue(actual = vector.indices.isNotEmpty())
+    }
+
+    @Test
+    internal fun `handles multi-byte characters that expand under UTF-8`() {
+        val text = "zahlung fÃ¼r die wohnung Ã¼berweisung ".repeat(n = 40)
+        val vector = vectorizer.vectorize(text = text)
+
+        assertTrue(actual = vector.indices.isNotEmpty())
+    }
+
+    @Test
+    internal fun `growing the buffer does not change the output for ordinary text`() {
+        // Force a grow, then re-vectorize the pinned input on the same thread and instance.
+        vectorizer.vectorize(text = (1..300).joinToString(separator = " ") { index -> "word$index" })
+        val vector = vectorizer.vectorize(text = "rent transfer landlord monthly")
+
+        assertContentEquals(expected = goldenIndices, actual = vector.indices)
+    }
+
+    @Test
+    internal fun `ngramsByBucket also survives an oversized record`() {
+        val text = (1..200).joinToString(separator = " ") { index -> "word$index" }
+        val byBucket = vectorizer.ngramsByBucket(text = text)
+
+        assertEquals(expected = vectorizer.vectorize(text = text).indices.toSet(), actual = byBucket.keys)
     }
 }

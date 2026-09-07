@@ -268,6 +268,31 @@ engine.retrain(epochs = 50, seed = 42)    // 50 shuffled passes, reproducible
 
 Naive Bayes is order-independent, so `retrain` mostly matters for the SGD model.
 
+### Persist your tuning
+
+Loading a model **replays its stored observations through a freshly built classifier**, so the
+tuning has to travel with the file or the restored model is a different model:
+
+```kotlin
+ModelStore.save(
+    path = path,
+    schema = engine.schema,
+    classifier = ClassifierKindEnum.LOGISTIC_REGRESSION,
+    hashingConfig = hashingConfig,
+    observations = engine.featureStore.all(),
+    calibration = engine.calibration,
+    hyperparameters = engine.classifier.hyperparameters(),   // ← without this, defaults come back
+)
+
+val loaded = ModelStore.load(path = path)
+val classifier = ClassifierFactory.create(kind = loaded.classifier, hyperparameters = loaded.hyperparameters)
+```
+
+`save` receives the classifier *kind*, not the instance, so it cannot discover the tuning by itself.
+`ClassifierHyperparameters` carries all of it in one value; fields belong to the classifiers that
+use them (`smoothingAlpha` to Naive Bayes, the SGD trio to logistic regression) and the rest stay at
+their defaults.
+
 ---
 
 ## 5. Measure model quality — `ModelEvaluator`

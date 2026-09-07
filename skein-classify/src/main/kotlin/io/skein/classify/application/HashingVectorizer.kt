@@ -22,20 +22,36 @@ class HashingVectorizer(
     private val normalizer: TextNormalizer = DefaultTextNormalizer(),
 ) {
 
+    private companion object {
+        /** Comfortably covers ordinary records without growing. */
+        const val DEFAULT_ENCODE_BUFFER_BYTES = 256
+        const val DEFAULT_BOUNDS_BUFFER_SIZE = 256
+
+        /** [encodeUtf8] handles BMP code points, which take at most three UTF-8 bytes each. */
+        const val MAX_UTF8_BYTES_PER_CHAR = 3
+
+        /** Two entries per word, plus slack for a trailing word with no following space. */
+        const val BOUNDS_HEADROOM = 2
+
+        /** Above these sizes a buffer is used once and discarded rather than retained per thread. */
+        const val MAX_POOLED_ENCODE_BYTES = 64 * 1024
+        const val MAX_POOLED_BOUNDS_SIZE = 16 * 1024
+    }
+
     private val scratch = ThreadLocal.withInitial { IntFloatHashMap() }
 
-    // Reusable UTF-8 encode buffer per thread. Max char n-gram: charNgramMax chars × 4 UTF-8 bytes.
-    // 256 bytes covers word n-grams up to ~40 chars without reallocation.
-    private val encBuf = ThreadLocal.withInitial { ByteArray(256) }
+    // Reusable per-thread UTF-8 encode buffer, sized for the common case and grown on demand by
+    // [encodeBuffer]. A word n-gram can span the whole record, so no fixed size is safe.
+    private val encBuf = ThreadLocal.withInitial { ByteArray(DEFAULT_ENCODE_BUFFER_BYTES) }
 
-    // Reusable word-boundary buffer: interleaved (start, end) pairs for up to 128 words per text.
-    // Normalized text (single-space-separated, trimmed) rarely exceeds ~30 words in financial records.
-    private val wordBounds = ThreadLocal.withInitial { IntArray(256) }
+    // Reusable per-thread word-boundary buffer: interleaved (start, end) pairs, grown on demand by
+    // [boundsBuffer].
+    private val wordBounds = ThreadLocal.withInitial { IntArray(DEFAULT_BOUNDS_BUFFER_SIZE) }
 
     fun vectorize(text: String): FeatureVector {
         val normalized = normalizer.normalize(raw = text)
         val accumulator = scratch.get()
-        val buf = encBuf.get()
+        val buf = encodeBuffer(text = normalized)
         accumulator.clear()
         forEachCharNgram(text = normalized, buf = buf) { bucket, _, _ ->
             accumulator.addTo(key = bucket, delta = 1.0f)
@@ -62,7 +78,7 @@ class HashingVectorizer(
      */
     fun ngramsByBucket(text: String): Map<Int, String> {
         val normalized = normalizer.normalize(raw = text)
-        val buf = encBuf.get()
+        val buf = encodeBuffer(text = normalized)
         val byBucket = HashMap<Int, String>()
         forEachCharNgram(text = normalized, buf = buf) { bucket, bytes, length ->
             byBucket.putIfAbsent(bucket, String(bytes, 0, length, Charsets.UTF_8))
@@ -99,7 +115,7 @@ class HashingVectorizer(
 
     /** Enumerates every word n-gram of [text]. See [forEachCharNgram] for why this is inline. */
     private inline fun forEachWordNgram(text: String, buf: ByteArray, emit: (Int, ByteArray, Int) -> Unit) {
-        val bounds = wordBounds.get()
+        val bounds = boundsBuffer(text = text)
         var wordCount = 0
         var wordStart = -1
         for (i in text.indices) {
@@ -137,6 +153,50 @@ class HashingVectorizer(
                 emit(bucketOf(buf = buf, length = pos), buf, pos)
             }
         }
+    }
+
+    /**
+     * A buffer large enough for any single n-gram of [text].
+     *
+     * The bound is checked once per call rather than per n-gram, so the inner loops are unchanged.
+     * A word n-gram can span the entire record, and the encoder emits at most
+     * [MAX_UTF8_BYTES_PER_CHAR] bytes per BMP character, plus one separator byte per joined word.
+     *
+     * An outlier record allocates a one-off buffer instead of replacing the pooled one, so a single
+     * huge input cannot permanently inflate every thread's retained memory.
+     */
+    private fun encodeBuffer(text: String): ByteArray {
+        val required = MAX_UTF8_BYTES_PER_CHAR * text.length + config.wordNgramMax
+        val pooled = encBuf.get()
+        if (pooled.size >= required) {
+            return pooled
+        }
+        if (required > MAX_POOLED_ENCODE_BYTES) {
+            return ByteArray(size = required)
+        }
+        val grown = ByteArray(size = required)
+        encBuf.set(grown)
+        return grown
+    }
+
+    /**
+     * A buffer large enough to hold the (start, end) pair of every word in [text].
+     *
+     * Two entries per word, and a text of single-character words separated by single spaces has the
+     * most words a given length can hold, so `length + 2` always suffices.
+     */
+    private fun boundsBuffer(text: String): IntArray {
+        val required = text.length + BOUNDS_HEADROOM
+        val pooled = wordBounds.get()
+        if (pooled.size >= required) {
+            return pooled
+        }
+        if (required > MAX_POOLED_BOUNDS_SIZE) {
+            return IntArray(size = required)
+        }
+        val grown = IntArray(size = required)
+        wordBounds.set(grown)
+        return grown
     }
 
     private fun bucketOf(buf: ByteArray, length: Int): Int {

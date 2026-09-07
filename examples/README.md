@@ -12,6 +12,38 @@ Run any of them from the project root via Gradle:
 
 ---
 
+## All use cases
+
+`./gradlew :examples:run` with no arguments prints this list too.
+
+| Use case | Shows |
+|---|---|
+| `transaction` | Classify bank-transaction text, route by category, extract structured fields |
+| `textrepair` | Train a `FrequencyModel`, repair broken words, full normalize → tokenize pipeline |
+| `patternmatching` | `TokenPattern` DSL, `findAll`, `matchesFully`, partial and non-matching cases |
+| `slots` | `PositionalSlot` vs `KeyAnchoredSlot` extraction |
+| `schemainference` | Infer a schema from samples, classify with it, and where the heuristics stop |
+| `validation` | `SchemaValidator` on valid, invalid and warning-bearing records |
+| `clustering` | `TemplateClusterer`: unsupervised layout discovery |
+| `persistence` | `ModelStore` save/load round-trip; `FrequencyModel` serialize/deserialize |
+| `import` | `RecordImportService`: stream, validate, accept/reject, feed the classifier |
+| `regression` | Naive Bayes → logistic regression retraining, confidence comparison |
+| `activelearning` | `ActiveLearningSelector`: pick uncertain rows, give feedback, watch metrics move |
+| `crf` | Train a CRF tagger, generalize to unseen input, then save, reload and resume training |
+| `explain` | Calibrate confidences, abstain below a threshold, explain why a label won |
+| `clidemo` | Schema inference plus an active-learning loop, with equivalent CLI commands |
+| `tokenization` | `WHITESPACE` vs `PUNCTUATION_AWARE` tokenizer modes |
+| `customtokens` | A custom `TokenPatternConfig` recognizing a domain order code |
+| `normalizeredges` | Normalizer idempotence and boundary behaviour |
+| `privacy` | PII fields excluded from features; `FEATURES_ONLY` mode |
+| `signature` | `PatternSignature`: identical layouts share a fingerprint |
+| `clitool` | Predict every row, then export a model as readable text |
+| `logwatch` | Train an anomaly detector from keyword rules, then scan log files |
+
+The two below are walked through in full; the rest are self-explanatory when run.
+
+---
+
 ## Use cases
 
 ### `transaction` — classify → route → extract
