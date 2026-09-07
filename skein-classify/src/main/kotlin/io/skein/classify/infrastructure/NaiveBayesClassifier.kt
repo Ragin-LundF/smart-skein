@@ -1,5 +1,6 @@
 package io.skein.classify.infrastructure
 
+import io.skein.classify.domain.Explanation
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.Label
 import io.skein.classify.domain.LabeledFeatures
@@ -77,6 +78,20 @@ class NaiveBayesClassifier(private val smoothingAlpha: Double = DEFAULT_SMOOTHIN
         val current = snapshot
         check(current.isTrained()) { "classifier has not been trained" }
         return current.predict(features = features)
+    }
+
+    override fun logScores(features: FeatureVector): Map<Label, Double> {
+        val current = snapshot
+        check(current.isTrained()) { "classifier has not been trained" }
+        return current.logScores(features = features)
+    }
+
+    override fun explain(features: FeatureVector, label: Label, limit: Int): Explanation {
+        require(value = limit > 0) { "limit must be positive" }
+        val current = snapshot
+        check(current.isTrained()) { "classifier has not been trained" }
+        require(value = label in current.labels()) { "unknown label ${label.value}" }
+        return current.explain(features = features, label = label, limit = limit)
     }
 
     override fun labels(): Set<Label> {

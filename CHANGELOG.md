@@ -2,6 +2,69 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-09-07
+
+### Added
+
+- **Model evaluation** (`skein-classify`) — `ModelEvaluator` scores a trained classifier against
+  held-out data, or trains fresh models over a stratified holdout or k folds and scores those.
+  Reports accuracy, per-class precision/recall/F1/support, macro/micro/weighted averages, a
+  confusion matrix, top-k accuracy, log loss, Brier score, and reliability bins with expected
+  calibration error. `StratifiedSplitter` produces deterministic, label-balanced splits that always
+  leave every label at least one training example.
+- **`skein-cli evaluate`** — prints an evaluation report from a saved model, either against a fresh
+  labeled CSV or by retraining over the model's stored corpus, with per-label and confusion-matrix
+  CSV output and a `--min-accuracy` gate that exits with code 2 for use in CI.
+- **Probability calibration** (`skein-classify`) — `TemperatureCalibrator` fits a temperature on
+  held-out data by minimizing negative log-likelihood; `ClassificationService.calibration` applies
+  it to every prediction. Calibration is rank-preserving, so it never changes which label wins, only
+  how confident the model claims to be. Naive Bayes probabilities are overconfident by construction,
+  which is what this exists to correct.
+- **Abstention** — `Prediction.isConfident`, `ClassificationService.classifyOrNull`, and
+  `skein-cli predict --min-confidence`. An abstained row is written with an empty label cell and its
+  confidence intact, so it flows straight back into `skein-cli label` as a pending row.
+- **Explanations** (`skein-classify`) — `ClassificationService.explain` and `Classifier.explain`
+  return the ranked per-feature contributions behind a prediction, as an exact additive
+  decomposition of the score that drives the probability. Contributions are mean-centered, so a
+  feature equally likely under every label contributes zero. Buckets stay opaque by default;
+  `AttributionModeEnum.WITH_NGRAMS` resolves them to source fragments, re-derived on the call with
+  no stored index.
+- **CRF model persistence** (`skein-extract`) — `CrfModelStore` saves and loads a trained
+  `CrfSequenceLabeler` as a single versioned `SKCR` file, with no new dependencies. Hyperparameters
+  and the SGD step counter are persisted, so training resumes exactly where it stopped rather than
+  silently restarting with default settings. `CrfModelStore.metadata` reads the header without
+  inflating the weights.
+
+### Changed
+
+- `ClassificationService` exposes `schema`, `classifier` and `featureStore` as read-only properties
+  (they were already public constructor parameters). Source- and binary-compatible.
+- `Classifier` gains `logScores` and `explain`, both with default implementations, so existing
+  third-party classifiers keep compiling and linking unchanged. Implementations that override
+  `classify` but not `logScores` fall back to `ln(probability)`, which underflows on confident
+  models — **third-party classifiers should override `logScores`.**
+- `ModelStore.load` now reports a truncated or corrupt file as an `IllegalArgumentException` instead
+  of leaking a raw `EOFException`.
+
+### Security
+
+- A saved CRF model contains fragments of the training text in clear, because a CRF learns features
+  keyed by the token text itself. This is unlike classification, whose features are irreversible
+  hashes. `CrfModelStore` therefore defaults to `FeatureRetentionEnum.FREQUENT_ONLY`, dropping
+  lexical features seen fewer than twice. That **reduces** exposure without eliminating it — only
+  `FeatureRetentionEnum.STRUCTURAL_ONLY` carries a zero-clear-text guarantee, and only
+  `ALL_FEATURES` restores a bit-identical model.
+
+### Breaking
+
+- **Model file format.** `.skein` files are now written at version 2 (the calibration temperature was
+  appended). Version 2 readers accept both v1 and v2 files, but **a 1.1.0 reader rejects a 1.2.0
+  file**, because its version check is an exact match.
+- `LoadedModel` gains a fifth property, `calibration`. Its getters and `component1..4` are unchanged,
+  so reading a loaded model is unaffected, but the four-argument constructor and the old `copy`
+  signature are gone.
+- `skein-cli export` writes a `skein-model 2` header with an added `calibration` line.
+
 ## [1.1.0] - 2026-06-28
 
 - Fixed some performance issues in training for classification

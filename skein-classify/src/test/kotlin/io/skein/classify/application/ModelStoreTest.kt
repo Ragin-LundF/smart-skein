@@ -212,8 +212,8 @@ internal class ModelStoreTest {
     internal fun `load rejects file with correct magic but wrong version`() {
         val path = Files.createTempFile("skein-test", ".skein")
         try {
-            // SKEI magic (0x53 0x4B 0x45 0x49) with version 0x02 instead of 0x01
-            path.toFile().writeBytes(byteArrayOf(0x53, 0x4B, 0x45, 0x49, 0x02, 0x00))
+            // SKEI magic (0x53 0x4B 0x45 0x49) with an unsupported version 0x03 (v1 and v2 are read)
+            path.toFile().writeBytes(byteArrayOf(0x53, 0x4B, 0x45, 0x49, 0x03, 0x00))
             assertFailsWith<IllegalArgumentException> {
                 ModelStore.load(path = path)
             }

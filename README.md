@@ -15,8 +15,17 @@ text into recognizable patterns. Each module is one thread that builds on the ot
 1. **Shared text foundation** — normalization, broken-word repair (`"apart ment" → "apartment"`),
    and a typed tokenizer producing pattern signatures (`<word> <date> <numeric>`).
 2. **Classification** — assign a label to a whole record, typo-tolerant, self-training, with
-   privacy-preserving feature hashing so personal data is never stored in clear text.
+   privacy-preserving feature hashing so personal data is never stored in clear text. Predictions
+   come with calibrated confidences, an abstain option, and an exact per-feature explanation of the
+   score. Model quality is measurable: holdout and k-fold evaluation with per-class metrics.
 3. **Extraction** — pull structured values out of text via typed-token patterns and slot filling.
+   A trained CRF token tagger can be saved and resumed.
+
+> **A note on the privacy claim.** Feature hashing keeps personal data out of *classification*
+> models: the features are irreversible keyed hashes. The CRF tagger in `skein-extract` is
+> different — it learns features keyed by the token text itself, so a saved CRF model contains
+> fragments of the training text unless written with `FeatureRetentionEnum.STRUCTURAL_ONLY`. See
+> [`skein-extract`](skein-extract).
 
 ## Module layout
 

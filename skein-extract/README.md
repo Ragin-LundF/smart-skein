@@ -2,7 +2,8 @@
 
 Pull **structured values** out of unstructured text via typed-token patterns and slot filling.
 Unlike `skein-classify`, this module returns the **real values** — it does not hash or destroy them —
-and **persists nothing by default**. Depends on `skein-text`.
+and **persists nothing unless you explicitly save a trained tagger** (see
+[Persisting a trained tagger](#persisting-a-trained-tagger--crfmodelstore)). Depends on `skein-text`.
 
 > **Audience:** developers defining extraction rules, and data scientists who want to discover layout
 > templates automatically or **train** the learnable CRF token tagger.
@@ -222,6 +223,69 @@ examples and more epochs. Hold out some sequences to check tagging accuracy.
 
 ---
 
+## 5. Persisting a trained tagger — `CrfModelStore`
+
+A CRF that only lives in memory loses its training on exit. `CrfModelStore` writes one to a single
+file and reads it back, hyperparameters and progress included, so training resumes rather than
+restarting.
+
+```kotlin
+val labeler = CrfSequenceLabeler()
+repeat(200) { training.forEach { (tokens, tags) -> labeler.learn(tokens = tokens, tags = tags) } }
+
+CrfModelStore.save(path = Path("tagger.skeincrf"), snapshot = labeler.snapshot())
+
+val restored = CrfSequenceLabeler.from(snapshot = CrfModelStore.load(path = Path("tagger.skeincrf")))
+restored.label(tokens = tokens)                    // same output as the original
+restored.learn(tokens = more, tags = moreTags)     // and training continues from the saved step
+```
+
+`CrfModelStore.metadata(path)` reads the header alone — retention policy, writer version, creation
+time — without inflating the weights.
+
+### ⚠️ A saved CRF contains your training text
+
+This is the one place where Skein's "never stored in clear text" property does **not** hold. A CRF
+learns features keyed by the token text itself (`word=`, plus three-character `prefix=`/`suffix=`
+affixes), so the weight table is a lexicon of the training corpus. Anyone with the file can
+decompress it and read that vocabulary. `skein-classify` is different — its features are
+irreversible keyed hashes.
+
+| Retention | What is written | Privacy | Cost |
+|---|---|---|---|
+| `ALL_FEATURES` | every weight | **none** — every token seen even once is on disk | the only mode that restores a bit-identical model |
+| `FREQUENT_ONLY` *(default)* | lexical features seen at least `minLexicalOccurrences` times (default 2), plus all structure | **reduced, not eliminated** — a name occurring twice survives | negligible; a weight from one occurrence is statistically worthless anyway |
+| `STRUCTURAL_ONLY` | token-type structure and transitions only | **zero clear text** | loses generalization from word shape, e.g. recognizing an unseen `-ing` word by its suffix |
+
+The default is the safer mode deliberately: `ALL_FEATURES` as a default would turn a
+privacy-preserving library into a PII exporter the first time anyone called `save`.
+
+### File format `SKCR`
+
+```
+offset 0   4 bytes  magic 'S' 'K' 'C' 'R'
+offset 4   1 byte   format major (breaking)
+offset 5   1 byte   format minor (additive)
+offset 6   ...      GZIP( payload )
+```
+
+Hand-rolled over `DataOutputStream`, so this module keeps its single dependency on `skein-text`.
+The reader accepts any minor version — including a newer one — and never asserts end-of-stream, so
+fields a later writer appends are ignored rather than fatal. A differing major is refused with a
+message naming both versions. Enum values are written as stable codes, never ordinals, so
+reordering an enum constant cannot silently reinterpret an old file.
+
+### Error behavior
+
+- `save` throws `IllegalArgumentException` for an untrained labeler or a `minLexicalOccurrences`
+  below 1.
+- `load` throws `IllegalArgumentException` for a foreign magic, an unreadable major version, or a
+  truncated or corrupt payload.
+- `CrfSequenceLabeler.from` validates the snapshot — non-empty and duplicate-free tag order, a
+  non-negative step, and no weight referencing an unknown tag.
+
+---
+
 ## Package layout
 
 ```
@@ -231,7 +295,8 @@ io.skein.extract
 │                   ExtractedField, SourceSpan, ExtractionResult, TemplateCluster, Tag
 ├─ application/     PatternMatcher, SlotExtractor, TemplateClusterer
 ├─ spi/             SequenceLabeler (port)
-└─ infrastructure/  CrfSequenceLabeler
+└─ infrastructure/  CrfSequenceLabeler, CrfModelStore, CrfModelSnapshot,
+                    CrfModelMetadata, FeatureRetentionEnum
 ```
 
 | Goal | Reach for |
@@ -240,6 +305,7 @@ io.skein.extract
 | Match raw token-type structure | `TokenPattern` + `PatternMatcher` |
 | Find layouts you don't know yet | `TemplateClusterer` |
 | Tag tokens when rules can't keep up | `CrfSequenceLabeler` (train it) |
+| Keep a trained tagger across restarts | `CrfModelStore` (mind the retention modes) |
 
 See [`examples`](../examples) for `SlotExtractor` driven by a classifier's prediction — the full
 **classify → route → extract** pipeline.

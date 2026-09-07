@@ -37,13 +37,52 @@ class HashingVectorizer(
         val accumulator = scratch.get()
         val buf = encBuf.get()
         accumulator.clear()
-        addCharNgrams(text = normalized, accumulator = accumulator, buf = buf)
-        addWordNgrams(text = normalized, accumulator = accumulator, buf = buf)
+        forEachCharNgram(text = normalized, buf = buf) { bucket, _, _ ->
+            accumulator.addTo(key = bucket, delta = 1.0f)
+        }
+        forEachWordNgram(text = normalized, buf = buf) { bucket, _, _ ->
+            accumulator.addTo(key = bucket, delta = 1.0f)
+        }
         val (indices, values) = accumulator.sortedKeysAndValues()
         return FeatureVector(indices = indices, values = values)
     }
 
-    private fun addCharNgrams(text: String, accumulator: IntFloatHashMap, buf: ByteArray) {
+    /**
+     * Maps each feature bucket of [text] back to one representative n-gram of [text].
+     *
+     * **Opt-in and privacy-relevant.** This builds nothing and stores nothing: the mapping is
+     * re-derived on the call from text the caller already holds, so it reveals nothing that a caller
+     * holding both the hashing key and the record could not compute for itself by calling
+     * [vectorize] on candidate n-grams. The returned strings are source text — see
+     * [io.skein.classify.domain.AttributionModeEnum].
+     *
+     * ponytail: the first n-gram to reach a bucket wins, so colliding n-grams are not reported and
+     * the result is a representative rather than a complete pre-image. Upgrade path: return
+     * `Map<Int, List<String>>`.
+     */
+    fun ngramsByBucket(text: String): Map<Int, String> {
+        val normalized = normalizer.normalize(raw = text)
+        val buf = encBuf.get()
+        val byBucket = HashMap<Int, String>()
+        forEachCharNgram(text = normalized, buf = buf) { bucket, bytes, length ->
+            byBucket.putIfAbsent(bucket, String(bytes, 0, length, Charsets.UTF_8))
+        }
+        forEachWordNgram(text = normalized, buf = buf) { bucket, bytes, length ->
+            byBucket.putIfAbsent(bucket, String(bytes, 0, length, Charsets.UTF_8))
+        }
+        return byBucket
+    }
+
+    /**
+     * Enumerates every character n-gram of [text], invoking [emit] with the bucket, the shared
+     * encode buffer and the byte length.
+     *
+     * Inline with a crossinline sink so [vectorize] keeps the exact loop body it had before this
+     * was shared — the alternative, passing an optional collector into the hot path, would add a
+     * field read and a branch to the innermost loop of the most benchmark-sensitive method here for
+     * the sake of a feature almost no call uses.
+     */
+    private inline fun forEachCharNgram(text: String, buf: ByteArray, emit: (Int, ByteArray, Int) -> Unit) {
         if (text.isEmpty()) {
             return
         }
@@ -53,12 +92,13 @@ class HashingVectorizer(
             }
             for (start in 0..text.length - size) {
                 val len = encodeUtf8(text = text, start = start, end = start + size, buf = buf, offset = 0)
-                accumulator.addTo(key = bucketOf(buf = buf, length = len), delta = 1.0f)
+                emit(bucketOf(buf = buf, length = len), buf, len)
             }
         }
     }
 
-    private fun addWordNgrams(text: String, accumulator: IntFloatHashMap, buf: ByteArray) {
+    /** Enumerates every word n-gram of [text]. See [forEachCharNgram] for why this is inline. */
+    private inline fun forEachWordNgram(text: String, buf: ByteArray, emit: (Int, ByteArray, Int) -> Unit) {
         val bounds = wordBounds.get()
         var wordCount = 0
         var wordStart = -1
@@ -94,7 +134,7 @@ class HashingVectorizer(
                     val wEnd = bounds[wi * 2 + 1]
                     pos += encodeUtf8(text = text, start = wStart, end = wEnd, buf = buf, offset = pos)
                 }
-                accumulator.addTo(key = bucketOf(buf = buf, length = pos), delta = 1.0f)
+                emit(bucketOf(buf = buf, length = pos), buf, pos)
             }
         }
     }

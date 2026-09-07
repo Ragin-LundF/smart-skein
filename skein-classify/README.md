@@ -14,7 +14,10 @@ statistical ML — no neural networks, no GPU, no external services. Depends on 
   full retrain needed (though batch `retrain` is available for SGD models).
 - **Privacy by construction** — text becomes an irreversible, keyed feature hash before any model
   sees it; PII fields never enter the feature text at all.
-- **Cheap & explainable** — runs on a CPU, predictions come with full ranked alternatives.
+- **Cheap & explainable** — runs on a CPU; predictions come with ranked alternatives *and* an exact
+  additive per-feature decomposition of the score (see "Why this label").
+- **Measurable** — holdout and k-fold evaluation with per-class metrics, a confusion matrix and
+  reliability bins, so "is this model good enough" is a question you can answer.
 
 ## Installation
 
@@ -267,7 +270,119 @@ Naive Bayes is order-independent, so `retrain` mostly matters for the SGD model.
 
 ---
 
-## 5. Keep a human in the loop — `ActiveLearningSelector`
+## 5. Measure model quality — `ModelEvaluator`
+
+Training tells you nothing about whether the model is any good. `ModelEvaluator` answers that.
+
+```kotlin
+val evaluator = ModelEvaluator()
+
+// (a) score a trained model against data it has never seen
+val report = evaluator.evaluate(classifier = engine.classifier, holdout = heldOutObservations)
+
+// (b) same thing from records, reading truth from the schema's label field
+val fromRecords = evaluator.evaluateRecords(service = engine, records = labeledRecords)
+
+// (c) measure the RECIPE: retrain over a stratified split or k folds
+val cv = evaluator.crossValidate(
+    observations = engine.featureStore.all(),
+    classifierFactory = { ClassifierFactory.create(kind = ClassifierKindEnum.NAIVE_BAYES) },
+    folds = 5,
+)
+println("mean ${cv.meanAccuracy()} ± ${cv.accuracyStandardDeviation()}")
+```
+
+> **What is actually being measured.** `evaluate` and `evaluateRecords` score *the model you hand
+> them*, so the data must genuinely be held out. `holdout` and `crossValidate` train **new** models,
+> so they measure the recipe — classifier, corpus and settings — not any particular saved artifact.
+> In particular, a `.skein` file stores the *training* observations, so cross-validating over them
+> says nothing about the model saved in that same file: it saw all of those rows.
+
+### The metric conventions
+
+| Metric | Convention |
+|---|---|
+| precision / recall / F1 | a zero denominator yields `0.0`, never `NaN` |
+| macro average | over **every** label in the matrix, including one predicted but never expected, so a hallucinated label drags it down |
+| micro average | aggregates TP/FP/FN first; for single-label multi-class it equals accuracy |
+| weighted average | each label's metric weighted by its support |
+| top-k accuracy | truth anywhere in the top k alternatives; `topK = 1` reproduces accuracy |
+| log loss | the true label's probability is floored at `1e-15`, so an unseen label costs a large but finite penalty |
+| Brier score | multi-class, in `[0, 2]`; a true label with no output unit costs a full `1.0` |
+| ECE | support-weighted mean gap between confidence and accuracy across the reliability bins |
+
+`support` counts **unique** observations, because `InMemoryFeatureStore` deduplicates identical rows.
+
+`epochs` above 1 only affects SGD models: Naive Bayes rebuilds its snapshot from the batch, so extra
+passes are a no-op.
+
+Splits are stratified and deterministic under a seed. Every label keeps at least one training
+example — without that, a rare class vanishes from training and scores a recall of zero that
+measures the split rather than the model.
+
+---
+
+## 6. Calibrate confidences and abstain
+
+The raw softmax runs over **unnormalized** Naive Bayes log-likelihoods, which saturate near 0 and 1.
+Those numbers are shown to humans and drive uncertainty sampling, so the overconfidence is not
+cosmetic — it degrades active learning.
+
+```kotlin
+engine.fitCalibration(heldOut = heldOutObservations)   // fits and installs a temperature
+engine.classify(record = record).confidence            // now calibrated
+
+// abstain rather than guess
+val prediction: Prediction? = engine.classifyOrNull(record = record, minConfidence = 0.85)
+```
+
+Temperature scaling is **rank-preserving**: it never changes which label wins, only how confident
+the model claims to be. So accuracy and top-k are untouched while log loss and ECE improve.
+
+> **Fit on held-out data.** Scores on rows the model trained on already look well calibrated, so
+> fitting there returns a temperature near 1 and silently does nothing.
+
+Expect a poor log loss and ECE from `NaiveBayesClassifier` even at high accuracy — that is the
+failure mode calibration exists to correct, and the reliability bins are how you see it.
+
+---
+
+## 7. Why this label — `explain`
+
+```kotlin
+val explanation = engine.explain(record = record, limit = 10)!!
+explanation.contributions.forEach { c ->
+    println("bucket ${c.featureIndex}  ${c.contribution}")
+}
+```
+
+The decomposition is **exact**: `base` plus the contribution of every feature equals `total`, and
+`total` is the label's score minus the mean score across labels — precisely the quantity the softmax
+turns into a probability. No sampling, no surrogate model.
+
+Contributions are **mean-centered**, which is what makes them readable. Every Naive Bayes term is a
+log-probability and therefore negative, so ranking the raw terms would rank by "least negative" and
+surface whichever n-grams are commonest overall. Centering turns each term into a log-odds ratio
+against the average label, so a feature equally likely under every label contributes exactly zero.
+
+By default a contribution carries only its opaque bucket id, which is safe to log. A bucket is a
+**stable pseudonym** under a fixed key, which is enough to spot a single feature dominating a
+prediction (usually an identifier that leaked into the features), to watch influence drift between
+model versions, and to diagnose collisions.
+
+```kotlin
+engine.explain(record = record, mode = AttributionModeEnum.WITH_NGRAMS)
+```
+
+> **`WITH_NGRAMS` returns clear text.** It builds no index and weakens no saved model — the n-grams
+> are re-derived on the call from the record you passed in, so it grants nothing to an adversary who
+> does not already hold both the hashing key and the record. But the *result* contains source text:
+> do not log it or send it anywhere the record itself may not go. This is why it is a per-call
+> argument rather than a setting — every site that produces clear text is greppable.
+
+---
+
+## 8. Keep a human in the loop — `ActiveLearningSelector`
 
 Don't label everything. Train on a little, then ask the model which **unlabeled** records it's most
 unsure about, label those, and feed them back. This is the cheapest path to accuracy.
@@ -303,7 +418,7 @@ A typical loop: `learnAll(seed)` → `selectForReview` → human labels → `fee
 
 ---
 
-## 6. Storage — `FeatureStore`
+## 9. Storage — `FeatureStore`
 
 `ClassificationService` persists every observation (label + feature vector) to a `FeatureStore`,
 which is what `retrain`, `metrics`, and `forget` read/clear.
@@ -324,7 +439,7 @@ it to back the corpus with anything you like.
 
 ---
 
-## 7. Bulk import — `RecordImportService`
+## 10. Bulk import — `RecordImportService`
 
 For ingesting a stream (CSV, DB cursor, …) with validation in one pass:
 
@@ -376,9 +491,16 @@ io.skein.classify
 ├─ domain/          Record, Schema + FieldSpec hierarchy, SensitivityEnum, Label, FeatureVector,
 │                   LabeledFeatures, HashingConfig, Prediction/ScoredLabel, PredictionFactory,
 │                   PrivacyModeEnum, UncertaintyStrategyEnum, ReviewCandidate, ClassificationMetrics,
-│                   ImportResult/RejectedRecord/MappedRecord, ValidationResult
+│                   ImportResult/RejectedRecord/MappedRecord, ValidationResult,
+│                   Calibration, CalibrationSample, Explanation, FeatureContribution,
+│                   AttributionModeEnum, PredictionOutcome, ConfusionMatrix, LabelMetrics,
+│                   AveragedMetrics, CalibrationBin, DatasetSplit, EvaluationReport,
+│                   CrossValidationReport, EvaluationReportFactory
 ├─ application/     SchemaValidator, SchemaInference, HashingVectorizer, RecordMapper,
-│                   RecordImportService, ClassificationService, ActiveLearningSelector
+│                   RecordImportService, ClassificationService, ActiveLearningSelector,
+│                   ModelStore/LoadedModel/ClassifierKindEnum, ClassifierFactory,
+│                   ModelEvaluator, StratifiedSplitter, EvaluationReportFormatter,
+│                   TemperatureCalibrator
 ├─ spi/             Classifier, FeatureStore, RecordSource (ports)
 └─ infrastructure/  SipHash, InMemoryFeatureStore, NaiveBayesClassifier, LogisticRegressionSgdClassifier
 ```
