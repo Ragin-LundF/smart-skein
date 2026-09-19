@@ -3,6 +3,7 @@ package io.skein.classify.application
 import io.skein.classify.infrastructure.LogisticRegressionSgdClassifier
 import io.skein.classify.infrastructure.NaiveBayesClassifier
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 internal class ClassifierFactoryTest {
@@ -18,10 +19,25 @@ internal class ClassifierFactoryTest {
     }
 
     @Test
-    internal fun `builds an untrained classifier for every kind`() {
-        // Iterating the entries means a newly added kind fails here rather than silently.
+    internal fun `every kind either builds an untrained classifier or is refused by name`() {
         ClassifierKindEnum.entries.forEach { kind ->
-            assertTrue(actual = ClassifierFactory.create(kind = kind).labels().isEmpty())
+            // An exhaustive `when` **expression**, so a newly added kind is a compile error here
+            // rather than quietly inheriting whichever branch happens to come last.
+            val checked: Unit = when (kind) {
+                ClassifierKindEnum.NAIVE_BAYES,
+                ClassifierKindEnum.LOGISTIC_REGRESSION,
+                -> assertTrue(actual = ClassifierFactory.create(kind = kind).labels().isEmpty())
+
+                // Not a Classifier at all: it implements MultiLabelClassifier and is fitted in one
+                // batch, so there is nothing untrained to hand back.
+                ClassifierKindEnum.MULTI_LABEL_LOGISTIC -> {
+                    val failure = assertFailsWith<IllegalArgumentException> {
+                        ClassifierFactory.create(kind = kind)
+                    }
+                    assertTrue(actual = failure.message!!.contains(other = "loadMultiLabel"))
+                }
+            }
+            checked
         }
     }
 

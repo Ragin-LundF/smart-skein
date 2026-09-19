@@ -17,6 +17,10 @@ dependencies {
     implementation(libs.kotlinx.serialization.protobuf)
 
     testImplementation(libs.kotlin.test.junit5)
+    // Test scope only: reads the reference optima in src/test/resources/reference. Deliberately
+    // not an implementation dependency -- the model format is ProtoBuf, and no consumer of this
+    // module should inherit a JSON parser it does not use.
+    testImplementation(libs.kotlinx.serialization.json)
     testRuntimeOnly(libs.junit.jupiter)
 }
 

@@ -2,10 +2,15 @@ package io.skein.classify.application
 
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.HashingConfig
+import io.skein.classify.domain.TermWeightingEnum
+import io.skein.classify.domain.VectorizerFingerprint
 import io.skein.classify.infrastructure.IntFloatHashMap
 import io.skein.classify.infrastructure.SipHash
+import io.skein.classify.spi.Vectorizer
 import io.skein.text.infrastructure.DefaultTextNormalizer
 import io.skein.text.spi.TextNormalizer
+import java.security.MessageDigest
+import kotlin.math.ln
 
 /**
  * Turns text into a sparse [FeatureVector] of hashed character and word n-grams.
@@ -16,13 +21,21 @@ import io.skein.text.spi.TextNormalizer
  *
  * Counts accumulate into a reusable per-thread [IntFloatHashMap] (no boxing, no per-call map
  * allocation) and are emitted as sorted parallel arrays.
+ *
+ * Implements [Vectorizer], so a model trained on these features can be swapped for one trained on
+ * an external embedding without anything downstream changing. Its [fingerprint] covers the hashing
+ * key, the width, both n-gram ranges, the term weighting and the normalizer's identity — every
+ * input that changes the resulting vector.
  */
 class HashingVectorizer(
     private val config: HashingConfig,
     private val normalizer: TextNormalizer = DefaultTextNormalizer(),
-) {
+) : Vectorizer {
 
     private companion object {
+        /** Identifies this implementation in a [VectorizerFingerprint]. */
+        const val KIND = "hashing"
+
         /** Comfortably covers ordinary records without growing. */
         const val DEFAULT_ENCODE_BUFFER_BYTES = 256
         const val DEFAULT_BOUNDS_BUFFER_SIZE = 256
@@ -48,7 +61,7 @@ class HashingVectorizer(
     // [boundsBuffer].
     private val wordBounds = ThreadLocal.withInitial { IntArray(DEFAULT_BOUNDS_BUFFER_SIZE) }
 
-    fun vectorize(text: String): FeatureVector {
+    override fun vectorize(text: String): FeatureVector {
         val normalized = normalizer.normalize(raw = text)
         val accumulator = scratch.get()
         val buf = encodeBuffer(text = normalized)
@@ -60,7 +73,54 @@ class HashingVectorizer(
             accumulator.addTo(key = bucket, delta = 1.0f)
         }
         val (indices, values) = accumulator.sortedKeysAndValues()
+        applyTermWeighting(values = values)
         return FeatureVector(indices = indices, values = values)
+    }
+
+    override fun dimension(): Int {
+        return config.numFeatures
+    }
+
+    /**
+     * The digest covers every setting that changes the emitted vector, including the normalizer's
+     * type — two vectorizers differing only in how they fold case or strip punctuation produce
+     * different features from the same text, and a model must not silently accept the wrong one.
+     *
+     * ponytail: the normalizer contributes its class name, not its configuration. Ceiling: two
+     * instances of one configurable normalizer class, tuned differently, share a fingerprint and
+     * would pass a check they should fail. Upgrade path: a `fingerprint()` on `TextNormalizer`
+     * itself, which is an additive change to that port.
+     */
+    override fun fingerprint(): VectorizerFingerprint {
+        val material = listOf(
+            "key0=${config.key0}",
+            "key1=${config.key1}",
+            "numFeatures=${config.numFeatures}",
+            "charNgram=${config.charNgramMin}-${config.charNgramMax}",
+            "wordNgram=${config.wordNgramMin}-${config.wordNgramMax}",
+            "termWeighting=${config.termWeighting.name}",
+            "normalizer=${normalizer.javaClass.name}",
+        ).joinToString(separator = "|")
+        val digest = MessageDigest.getInstance("SHA-256").digest(material.toByteArray(Charsets.UTF_8))
+        return VectorizerFingerprint(
+            kind = KIND,
+            dimension = config.numFeatures,
+            configDigest = digest.joinToString(separator = "") { byte -> "%02x".format(byte) },
+        )
+    }
+
+    /**
+     * Rewrites raw counts in place under the configured weighting. In place because [values] was
+     * allocated by [IntFloatHashMap.sortedKeysAndValues] for this call and is not shared.
+     */
+    private fun applyTermWeighting(values: FloatArray) {
+        if (config.termWeighting == TermWeightingEnum.RAW_COUNT) {
+            return
+        }
+        for (i in values.indices) {
+            // Every emitted count is at least one, so ln is safe and the result is never negative.
+            values[i] = (1.0 + ln(x = values[i].toDouble())).toFloat()
+        }
     }
 
     /**

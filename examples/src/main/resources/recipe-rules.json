@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "rules": [
+    { "label": "VEGETARIAN",  "noneOf": { "ingredients": ["beef", "chicken", "pork", "fish", "bacon", "lamb"] } },
+    { "label": "VEGAN",       "noneOf": { "ingredients": ["beef", "chicken", "pork", "fish", "bacon", "lamb",
+                                                           "butter", "cheese", "egg", "milk", "cream", "honey"] } },
+    { "label": "GLUTEN_FREE", "noneOf": { "ingredients": ["flour", "pasta", "bread", "couscous", "barley"] } },
+    { "label": "ITALIAN",     "anyOf":  { "title": ["pasta", "risotto", "pizza", "lasagne"],
+                                           "ingredients": ["parmesan", "basil", "pancetta"] } },
+    { "label": "MEXICAN",     "anyOf":  { "title": ["taco", "burrito", "quesadilla"],
+                                           "ingredients": ["tortilla", "jalapeno", "chipotle"] } },
+    { "label": "DESSERT",     "anyOf":  { "title": ["cake", "tart", "brownie", "ice cream", "pudding"] } },
+    { "label": "QUICK",       "atMost": { "minutes": 20.0 } },
+    { "label": "ONE_POT",     "allOf":  { "method": ["one pot"] } }
+  ]
+}

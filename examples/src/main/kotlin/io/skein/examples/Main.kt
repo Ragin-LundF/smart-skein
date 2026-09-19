@@ -11,6 +11,7 @@ import io.skein.examples.logwatch.logWatchMain
 import io.skein.examples.patternmatching.runTokenPatternExample
 import io.skein.examples.persistence.runModelPersistenceExample
 import io.skein.examples.privacy.runPrivacyExample
+import io.skein.examples.recipes.runRecipeTaggingExample
 import io.skein.examples.regression.runLogisticRegressionExample
 import io.skein.examples.schema.runSchemaInferenceExample
 import io.skein.examples.slots.runPositionalSlotExample
@@ -42,6 +43,9 @@ private val USAGE = """
       activelearning    ActiveLearningSelector: pick uncertain candidates, feedback, metrics.
       crf               CrfSequenceLabeler: train on token sequences, generalize to unseen input,
                         then save, reload and resume training via CrfModelStore.
+      recipes           Multi-label tagging distilled from a keyword ruleset: grouped vs ungrouped
+                        cross-validation, a threshold sweep, and a hand-written held-out set that
+                        shows where the model generalises past the rules and where it does not.
       explain           Calibrate confidences, abstain on low confidence, and explain a prediction.
       clidemo           Schema inference + active learning loop with equivalent CLI command hints.
       tokenization      WHITESPACE vs PUNCTUATION_AWARE mode comparison.
@@ -73,6 +77,7 @@ private val DISPATCH: Map<String, () -> Unit> = mapOf(
     "regression" to ::runLogisticRegressionExample,
     "activelearning" to ::runActiveLearningExample,
     "crf" to ::runCrfTaggerExample,
+    "recipes" to ::runRecipeTaggingExample,
     "explain" to ::runExplainAndCalibrateExample,
     "clidemo" to ::runCliDemoExample,
     "tokenization" to ::runTokenizationModesExample,

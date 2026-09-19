@@ -10,6 +10,10 @@ import java.security.SecureRandom
  * hash-flooding. There is intentionally **no default key** — the caller must choose one explicitly,
  * because it is a privacy decision. Use [randomKey] for a fresh secret, or pass a fixed key to keep
  * feature indices stable across runs/processes (required when persisting or sharing a model).
+ *
+ * Every property here changes the vector a given text produces, so all of them are covered by
+ * [io.skein.classify.application.HashingVectorizer.fingerprint] and verified when a model is
+ * loaded.
  */
 data class HashingConfig(
     val key0: Long,
@@ -19,6 +23,7 @@ data class HashingConfig(
     val charNgramMax: Int = DEFAULT_CHAR_NGRAM_MAX,
     val wordNgramMin: Int = DEFAULT_WORD_NGRAM_MIN,
     val wordNgramMax: Int = DEFAULT_WORD_NGRAM_MAX,
+    val termWeighting: TermWeightingEnum = TermWeightingEnum.RAW_COUNT,
 ) {
 
     init {

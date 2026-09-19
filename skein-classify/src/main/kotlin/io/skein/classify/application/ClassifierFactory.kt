@@ -14,6 +14,9 @@ import io.skein.classify.spi.Classifier
  *
  * The `when` is exhaustive with no `else`, so adding a classifier kind becomes a compile error at
  * every construction site rather than a silent fallback.
+ *
+ * Not every kind yields a [Classifier]: [ClassifierKindEnum.MULTI_LABEL_LOGISTIC] implements
+ * [io.skein.classify.spi.MultiLabelClassifier] instead and is rejected here by name.
  */
 object ClassifierFactory {
 
@@ -31,6 +34,14 @@ object ClassifierFactory {
                 initialLearningRate = hyperparameters.initialLearningRate,
                 decayRate = hyperparameters.decayRate,
                 l2Regularization = hyperparameters.l2Regularization,
+            )
+
+            // A multi-label model implements a different port: it assigns any number of labels, is
+            // fitted in one batch, and has no `learn(one)` to offer. There is no Classifier to
+            // return here, and quietly substituting a single-label one would be worse than failing.
+            ClassifierKindEnum.MULTI_LABEL_LOGISTIC -> throw IllegalArgumentException(
+                "$kind is a MultiLabelClassifier, not a Classifier; " +
+                    "load it with ModelStore.loadMultiLabel or fit one with LbfgsMultiLabelLearner",
             )
         }
     }

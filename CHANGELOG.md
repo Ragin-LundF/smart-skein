@@ -2,6 +2,77 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **Multi-label classification** (`skein-classify`) — `MultiLabelClassifier` and `BatchLearner`, two
+  new SPI ports beside `Classifier`, for taxonomies whose labels co-occur. Every label gets an
+  independent one-vs-rest decision, so a record can carry several labels or none; a softmax
+  constrains its scores to sum to one, which suppresses a genuine second label by construction.
+  `Classifier` is unchanged — a caller picks a port by asking whether two labels can be true at once.
+  Recorded in [ADR 0001](docs/adr/0001-multi-label-classification.md), which also widens the module's
+  documented responsibility.
+- **L-BFGS batch training** (`skein-classify`) — `LbfgsMinimizer` (two-loop recursion, initial
+  Hessian scaling, Armijo backtracking, curvature-pair damping) and `LogisticObjective`, an
+  L2-regularised logistic loss over a `SparseMatrix` using scikit-learn's conventions exactly: `C`
+  multiplies the data term and the intercept is not regularised. `LbfgsMultiLabelLearner` fits one
+  head per label over a shared design matrix. Complementary to the existing online SGD classifier
+  rather than a replacement — SGD for incremental and active learning, L-BFGS when the corpus is in
+  hand and the best fit is wanted.
+- **Grouped splitting** (`skein-classify`) — `GroupedSplitter` and `MultiLabelCrossValidator` keep
+  rows sharing an origin inside one fold. Without it, rule-derived training data leaks across folds
+  and every score is inflated: measured micro-F1 0.79 random against 0.75 grouped, macro-F1 0.634
+  against 0.534. Cross-validation takes `MultiLabeledText` and builds a vectorizer per fold from that
+  fold's training rows alone, so anything fitted to the corpus cannot leak into the features.
+- **Weight persistence** (`skein-classify`) — `.skein` format version `0x03` stores a fitted weight
+  matrix rather than a replayable corpus. Weights are pruned by magnitude (`keepFraction`), stored
+  feature-major, delta-coded per row and written as `float16` where the range allows, with an
+  automatic fallback to `float32`. `ModelStore.saveMultiLabel` / `loadMultiLabel`, plus
+  `ClassifierKindEnum.MULTI_LABEL_LOGISTIC`.
+- **Vectorizer identity** (`skein-classify`) — the `Vectorizer` port, `VectorizerFingerprint`, and a
+  fingerprint check on load that throws `VectorizerMismatchException` on a mismatch. Scoring a model
+  with a different featurisation does not fail on its own; it returns confident, wrong labels
+  silently, which is why this is fatal rather than a warning. `HashingVectorizer` implements the port
+  and fingerprints its key, width, n-gram ranges, term weighting and normalizer.
+- **Scale hardening** (`skein-classify`) — `SparseMatrix` blocks rows so no array approaches
+  `Int.MAX_VALUE` (~8.5M documents at measured density) and stores values as `float`;
+  `TrainingParallelism` bounds concurrent fits from heap and feature count rather than core count;
+  `TokenMasker` collapses high-cardinality tokens via `skein-text`'s `TypedTokenizer` (measured 59%
+  fewer features, 60% smaller model); `CorpusDeduplicator` collapses rows identical once masked
+  (measured 400,000 documents to 21,420) and reports the ratio.
+- **Optional refinements** (`skein-classify`) — `TermWeightingEnum.SUBLINEAR` for `1 + ln(count)`
+  weighting; `IdfVectorizer` and `DocumentFrequencyTable` for IDF over hashed buckets, with a
+  document-frequency floor that scales with the corpus and a fitted table persisted alongside the
+  model; `LabelThresholds` and `ThresholdOptimizer` for a per-label acceptance threshold, since a
+  global cut silences a rare label while a well-supported one over-fires at the same value.
+- **Recipe tagging example** (`examples`) — `./gradlew :examples:run --args="recipes"`. A multi-label
+  model distilled from a JSON keyword ruleset, with grouped and ungrouped cross-validation side by
+  side, a threshold sweep, per-label thresholds, an explained prediction, and a hand-written held-out
+  set using wording the rules never mention — the only number that says whether the model generalises
+  past the rules.
+- **[`docs/bring-your-own-data.md`](docs/bring-your-own-data.md)** — six steps from your records to a
+  model, including the single question that decides single- versus multi-label.
+
+### Changed
+
+- `HashingConfig` gained a `termWeighting` property. It is appended with a default, so source using
+  named or positional arguments keeps compiling, but the generated `copy` and `componentN`
+  signatures change — a binary break for anything compiled against 1.2.0.
+- `.ai/instructions/module-architecture.md` — `skein-classify`'s responsibility is now "assigning
+  labels to a whole record — one label, or several when labels co-occur".
+
+### Fixed
+
+- `GroupedSplitter` orders equal-sized groups by a seeded mix of their names rather than
+  alphabetically. Group names encode structure, so alphabetical order correlates with it and
+  round-robin assignment can line a fold up with an entire category — five methods under five folds
+  put every `one pot` group in one fold, leaving the label that depends on it absent from four folds'
+  training data.
+- `ThresholdOptimizer` evaluates every distinct score in a single descending sweep instead of
+  sampling a fixed number of candidates. Sampling could step over the one threshold that separates
+  the classes cleanly and settle for a worse cut, and the sweep is `O(n log n)` rather than `O(n^2)`.
+
 ## [1.2.0] - 2026-09-07
 
 ### Added

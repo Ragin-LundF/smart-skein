@@ -67,7 +67,7 @@ Rules:
 | Module | Published | Responsibility |
 |---|---|---|
 | `skein-text` | yes | The shared text foundation: normalization, broken-word repair, tokenization into typed tokens, and structural pattern signatures. Depends on nothing. Everything else builds on it. |
-| `skein-classify` | yes | Assigning one label to a whole record: schema definition and validation, privacy-preserving feature hashing, the learning algorithms, model persistence, active-learning support, calibration, explanation and quality evaluation. |
+| `skein-classify` | yes | Assigning labels to a whole record — one label, or several when labels co-occur: schema definition and validation, privacy-preserving feature hashing, the learning algorithms, model persistence, active-learning support, calibration, explanation and quality evaluation. Single-label scoring is the `Classifier` port; co-occurring labels are `MultiLabelClassifier` with `BatchLearner`, and the two are siblings rather than alternatives. See `docs/adr/0001-multi-label-classification.md`. |
 | `skein-extract` | yes | Pulling structured values *out* of text: typed-token patterns, slot filling, layout clustering, and a trainable token tagger with its own model format. Unlike classification, it returns real values rather than hashes. |
 | `skein-store-postgres` | yes | An optional storage adapter implementing the classification module's storage port against PostgreSQL, with encryption at rest. Contains no learning logic. |
 | `skein-cli` | yes | Command-line tools over the library: interactive labeling, batch prediction, model inspection and evaluation. Holds only CLI concerns — argument parsing, CSV I/O, terminal interaction — and no algorithm that belongs in a library module. |
