@@ -1,7 +1,10 @@
-package io.skein.examples.embedding
+package io.skein.classify.embedding.http.infrastructure
 
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
+import io.skein.classify.embedding.http.domain.EmbeddingServiceConfig
+import io.skein.classify.spi.BatchVectorizer
+import io.skein.classify.spi.Vectorizer
 import java.net.InetSocketAddress
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -9,6 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -22,12 +26,16 @@ internal class HttpEmbeddingVectorizerTest {
 
     /** Inputs of every request the server received, in order. */
     private val received = mutableListOf<List<String>>()
+
+    /** Headers of the most recent request. */
+    private val receivedHeaders = mutableMapOf<String, String>()
     private var status = 200
     private var body: ((List<String>) -> String)? = null
 
     @BeforeTest
     internal fun startServer() {
         received.clear()
+        receivedHeaders.clear()
         status = 200
         body = null
         server = HttpServer.create(InetSocketAddress(0), 0)
@@ -48,6 +56,7 @@ internal class HttpEmbeddingVectorizerTest {
             ?.map { raw -> raw.trim().trim('"') }
             ?: emptyList()
         received.add(element = inputs)
+        exchange.requestHeaders.forEach { (name, values) -> receivedHeaders[name] = values.first() }
 
         val payload = body?.invoke(inputs) ?: defaultBody(inputs = inputs)
         val bytes = payload.toByteArray()
@@ -69,6 +78,8 @@ internal class HttpEmbeddingVectorizerTest {
         prefix: String = "",
         model: String = "test-model",
         revision: String = "rev-1",
+        headers: Map<String, String> = emptyMap(),
+        canaryProbes: List<String> = emptyList(),
     ): EmbeddingServiceConfig {
         return EmbeddingServiceConfig(
             baseUrl = baseUrl,
@@ -76,6 +87,8 @@ internal class HttpEmbeddingVectorizerTest {
             modelRevision = revision,
             inputPrefix = prefix,
             dimension = dimension,
+            headers = headers,
+            canaryProbes = canaryProbes,
             batchSize = batchSize,
         )
     }
@@ -209,5 +222,105 @@ internal class HttpEmbeddingVectorizerTest {
         assertFailsWith<IllegalArgumentException> { config().copy(baseUrl = "http://x/v1/") }
         assertFailsWith<IllegalArgumentException> { config().copy(batchSize = 0) }
         assertFailsWith<IllegalArgumentException> { config().copy(dimension = 0) }
+    }
+
+    @Test
+    internal fun `sends the configured headers with every request`() {
+        vectorizer(config = config(headers = mapOf("Authorization" to "Bearer secret-token")))
+            .vectorize(text = "x")
+
+        assertEquals(expected = "Bearer secret-token", actual = receivedHeaders["Authorization"])
+    }
+
+    /**
+     * A generated `toString` would print a bearer token into the first log line or assertion
+     * failure that touched the config. The copy-it-yourself version never had to care; a published
+     * one does.
+     */
+    @Test
+    internal fun `redacts header values when printed`() {
+        val printed = config(headers = mapOf("Authorization" to "Bearer secret-token")).toString()
+
+        assertFalse(actual = printed.contains(other = "secret-token"))
+        assertTrue(actual = printed.contains(other = "Authorization=***"))
+    }
+
+    @Test
+    internal fun `reports a body that is not an embeddings response instead of returning NaN`() {
+        body = { "<html>502 Bad Gateway</html>" }
+
+        val failure = assertFailsWith<IllegalStateException> { vectorizer().vectorize(text = "x") }
+
+        assertTrue(actual = failure.message!!.contains(other = "not an OpenAI embeddings response"))
+    }
+
+    /**
+     * Without this check a service switched from 384 to 768 dimensions is silently absorbed:
+     * scoring drops every index past the end of the weight matrix and keeps the rest, which came
+     * from a different model.
+     */
+    @Test
+    internal fun `refuses vectors of a different width than the model expects`() {
+        body = { """{"data":[{"index":0,"embedding":[1.0,2.0,3.0,4.0,5.0]}]}""" }
+
+        val failure = assertFailsWith<IllegalStateException> { vectorizer().vectorize(text = "x") }
+
+        assertTrue(actual = failure.message!!.contains(other = "5-dimension"))
+        assertTrue(actual = failure.message!!.contains(other = "expects 3"))
+    }
+
+    @Test
+    internal fun `captures no canary when no probes are configured`() {
+        assertNull(actual = vectorizer().canary())
+        assertTrue(actual = received.isEmpty())
+    }
+
+    @Test
+    internal fun `captures one canary reference per probe, unbatched`() {
+        val canary = vectorizer(config = config(canaryProbes = listOf("alpha", "beta"))).canary()
+
+        assertEquals(expected = listOf("alpha", "beta"), actual = canary!!.probes)
+        assertEquals(expected = 2, actual = canary.references.size)
+        // One request per probe: a reference captured inside a batch and re-embedded alone would
+        // drift on accumulation order alone.
+        assertEquals(expected = listOf(1, 1), actual = received.map { batch -> batch.size })
+    }
+
+    @Test
+    internal fun `caches the captured canary rather than re-embedding`() {
+        val subject = vectorizer(config = config(canaryProbes = listOf("alpha")))
+
+        subject.canary()
+        subject.canary()
+
+        assertEquals(expected = 1, actual = received.size)
+    }
+
+    @Test
+    internal fun `a canary notices the served model returning different vectors`() {
+        val subject = vectorizer(config = config(canaryProbes = listOf("alpha")))
+        val captured = subject.canary()!!
+
+        body = { inputs -> """{"data":[{"index":0,"embedding":[${inputs[0].length}.0,9.0,0.5]}]}""" }
+        val afterSwap = HttpEmbeddingVectorizer(config = config(canaryProbes = listOf("alpha")))
+            .canary()!!
+            .references
+
+        assertFalse(actual = captured.matches(observed = afterSwap))
+    }
+
+    /**
+     * Every call here is a network round trip, so library code featurising a corpus must be able
+     * to detect that batching is available without knowing the concrete type.
+     */
+    @Test
+    internal fun `announces itself as batchable through the port`() {
+        val subject: Vectorizer = vectorizer(config = config(batchSize = 2))
+
+        assertTrue(actual = subject is BatchVectorizer)
+
+        subject.vectorizeAll(texts = listOf("a", "bb", "ccc", "dddd"))
+
+        assertEquals(expected = 2, actual = received.size)
     }
 }

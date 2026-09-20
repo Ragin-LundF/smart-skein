@@ -65,7 +65,7 @@ differently and can retain text fragments — see that module.
 | `termWeighting` | `RAW_COUNT` | See below |
 
 Pick `numFeatures` from measurement, not instinct. Hashing bounds the model — the width is fixed
-whatever the corpus size — but it does not minimise it. At `2^20` a 237-label model is around
+whatever the corpus size — but it does not minimise it. At `2^20` a ~240-label model is around
 151 MB against 37 MB at `2^18`, because a million buckets is far more than most data needs.
 
 ## Term weighting
@@ -118,6 +118,7 @@ interface Vectorizer {
     fun vectorize(text: String): FeatureVector
     fun dimension(): Int
     fun fingerprint(): VectorizerFingerprint
+    fun canary(): VectorizerCanary? = null     // opt in; see Persistence
 }
 ```
 
@@ -132,7 +133,45 @@ itself.
 
 Shipped implementations: `HashingVectorizer`, `IdfVectorizer`,
 [`OnnxEmbeddingVectorizer`](../embeddings/onnx-local.md), and
-[`HttpEmbeddingVectorizer`](../embeddings/external-service.md) in `examples`.
+[`HttpEmbeddingVectorizer`](../embeddings/external-service.md) in
+`skein-classify-embedding-http`.
+
+### Batching — the `BatchVectorizer` sub-port
+
+```kotlin
+interface BatchVectorizer : Vectorizer {
+    fun vectorizeAll(texts: List<String>): List<FeatureVector>
+}
+```
+
+Implement this **only** when featurising many texts at once is materially cheaper than one at a
+time. For hashing it is not — a record costs microseconds and there is no per-call overhead worth
+amortising — so `HashingVectorizer` deliberately stays a plain `Vectorizer`. For an encoder it is
+one inference call instead of *n*, and for a service it is one HTTP round trip instead of *n*.
+Both embedding adapters implement it.
+
+Keeping it a separate type rather than a defaulted method is what makes the capability
+*detectable*: code about to featurise a whole corpus can tell whether it is making one network
+call or four hundred thousand.
+
+Callers do not need the distinction. The extension picks the better path:
+
+```kotlin
+import io.skein.classify.spi.vectorizeAll
+
+val vectors = vectorizer.vectorizeAll(texts = corpusTexts)   // batched if it can be, looped if not
+```
+
+Implementations must return **one vector per input, in input order**. A silently permuted batch
+attaches every vector to the wrong record, which does not throw and does not look wrong.
+
+`MultiLabelCrossValidator` uses this internally, which matters more than it sounds: it featurises
+every row once *per fold*, so five-fold cross-validation over an embedding service was five round
+trips per record before and is now two requests per fold.
+
+One caveat: it returns every vector at once. Over a large corpus with an embedding vectorizer that
+is real memory — chunk the call site if the corpus does not fit. `IdfVectorizer.fit` deliberately
+still streams one text at a time for exactly this reason.
 
 ## Masking high-cardinality tokens
 

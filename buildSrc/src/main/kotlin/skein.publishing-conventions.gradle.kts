@@ -23,13 +23,22 @@ fun configurePublication(publicationComponent: SoftwareComponent) {
             create<MavenPublication>("maven") {
                 from(publicationComponent)
 
-                artifactId = if (extra.has("publishArtifactId")) extra["publishArtifactId"] as String else project.name
+                // Read lazily, all three of them. This convention is applied from a module's
+                // `plugins { }` block, which runs before the body that sets these extras -- reading
+                // them eagerly silently published every artifact as "Skein Library" with no name.
+                afterEvaluate {
+                    artifactId = if (extra.has("publishArtifactId")) extra["publishArtifactId"] as String else project.name
+                }
                 version = project.version.toString()
                 // Add Dokka-generated Javadoc jar (lazy reference)
                 artifact(provider { tasks.named("dokkaGenerateHtmlJar").get() })
                 pom {
-                    name.set(if (extra.has("publishName")) extra["publishName"] as String else project.name)
-                    description.set(if (extra.has("publishDescription")) extra["publishDescription"] as String else "Skein Library")
+                    name.set(provider { if (extra.has("publishName")) extra["publishName"] as String else project.name })
+                    description.set(
+                        provider {
+                            if (extra.has("publishDescription")) extra["publishDescription"] as String else "Skein Library"
+                        },
+                    )
                     url.set("https://github.com/Ragin-LundF/smart-skein")
                     scm {
                         connection.set("scm:git:git@github.com:Ragin-LundF/smart-skein.git")

@@ -1,0 +1,126 @@
+public final class io/skein/text/application/BrokenWordRepairer {
+	public static final field Companion Lio/skein/text/application/BrokenWordRepairer$Companion;
+	public static final field DEFAULT_MAX_EDIT_DISTANCE I
+	public static final field DEFAULT_MAX_FRAGMENTS_PER_WORD I
+	public fun <init> (Lio/skein/text/domain/FrequencyModel;II)V
+	public synthetic fun <init> (Lio/skein/text/domain/FrequencyModel;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun repair (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class io/skein/text/application/BrokenWordRepairer$Companion {
+}
+
+public final class io/skein/text/application/SymSpellIndex {
+	public fun <init> (Ljava/util/Set;I)V
+	public final fun candidates (Ljava/lang/String;)Ljava/util/Set;
+}
+
+public final class io/skein/text/application/TypedTokenizer {
+	public fun <init> ()V
+	public fun <init> (Lio/skein/text/domain/TokenizationModeEnum;Lio/skein/text/domain/TokenPatternConfig;)V
+	public synthetic fun <init> (Lio/skein/text/domain/TokenizationModeEnum;Lio/skein/text/domain/TokenPatternConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun tokenize (Ljava/lang/String;)Ljava/util/List;
+}
+
+public final class io/skein/text/domain/FrequencyModel {
+	public static final field Companion Lio/skein/text/domain/FrequencyModel$Companion;
+	public static final field DEFAULT_MIN_KEEP_FREQUENCY I
+	public fun <init> ()V
+	public fun <init> (I)V
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun frequency (Ljava/lang/String;)I
+	public final fun isKnown (Ljava/lang/String;)Z
+	public final fun knownWords ()Ljava/util/Set;
+	public final fun learn (Ljava/lang/String;)V
+	public final fun learnAll (Ljava/lang/Iterable;)V
+	public final fun serialize ()Ljava/lang/String;
+}
+
+public final class io/skein/text/domain/FrequencyModel$Companion {
+	public final fun deserialize (Ljava/lang/String;)Lio/skein/text/domain/FrequencyModel;
+}
+
+public final class io/skein/text/domain/PatternSignature {
+	public static final field Companion Lio/skein/text/domain/PatternSignature$Companion;
+	public static final synthetic fun box-impl (Ljava/util/List;)Lio/skein/text/domain/PatternSignature;
+	public static fun constructor-impl (Ljava/util/List;)Ljava/util/List;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/util/List;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/util/List;Ljava/util/List;)Z
+	public final fun getTypes ()Ljava/util/List;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/util/List;)I
+	public static final fun render-impl (Ljava/util/List;)Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/util/List;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/util/List;
+}
+
+public final class io/skein/text/domain/PatternSignature$Companion {
+	public final fun of-yUtVMnY (Ljava/util/List;)Ljava/util/List;
+}
+
+public final class io/skein/text/domain/Token {
+	public fun <init> (Ljava/lang/String;Lio/skein/text/domain/TokenTypeEnum;II)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lio/skein/text/domain/TokenTypeEnum;
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun copy (Ljava/lang/String;Lio/skein/text/domain/TokenTypeEnum;II)Lio/skein/text/domain/Token;
+	public static synthetic fun copy$default (Lio/skein/text/domain/Token;Ljava/lang/String;Lio/skein/text/domain/TokenTypeEnum;IIILjava/lang/Object;)Lio/skein/text/domain/Token;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEndOffset ()I
+	public final fun getStartOffset ()I
+	public final fun getText ()Ljava/lang/String;
+	public final fun getType ()Lio/skein/text/domain/TokenTypeEnum;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/text/domain/TokenPatternConfig {
+	public static final field Companion Lio/skein/text/domain/TokenPatternConfig$Companion;
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lio/skein/text/domain/TokenPatternConfig;
+	public static synthetic fun copy$default (Lio/skein/text/domain/TokenPatternConfig;Ljava/util/List;ILjava/lang/Object;)Lio/skein/text/domain/TokenPatternConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTypedRules ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/text/domain/TokenPatternConfig$Companion {
+	public final fun getGERMAN ()Lio/skein/text/domain/TokenPatternConfig;
+	public final fun getUS ()Lio/skein/text/domain/TokenPatternConfig;
+}
+
+public final class io/skein/text/domain/TokenTypeEnum : java/lang/Enum {
+	public static final field ALPHANUMERIC Lio/skein/text/domain/TokenTypeEnum;
+	public static final field AMOUNT Lio/skein/text/domain/TokenTypeEnum;
+	public static final field DATE Lio/skein/text/domain/TokenTypeEnum;
+	public static final field NUMERIC Lio/skein/text/domain/TokenTypeEnum;
+	public static final field SYMBOL Lio/skein/text/domain/TokenTypeEnum;
+	public static final field WORD Lio/skein/text/domain/TokenTypeEnum;
+	public static final field WORD_SYMBOL Lio/skein/text/domain/TokenTypeEnum;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/skein/text/domain/TokenTypeEnum;
+	public static fun values ()[Lio/skein/text/domain/TokenTypeEnum;
+}
+
+public final class io/skein/text/domain/TokenizationModeEnum : java/lang/Enum {
+	public static final field PUNCTUATION_AWARE Lio/skein/text/domain/TokenizationModeEnum;
+	public static final field WHITESPACE Lio/skein/text/domain/TokenizationModeEnum;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/skein/text/domain/TokenizationModeEnum;
+	public static fun values ()[Lio/skein/text/domain/TokenizationModeEnum;
+}
+
+public final class io/skein/text/infrastructure/DefaultTextNormalizer : io/skein/text/spi/TextNormalizer {
+	public fun <init> ()V
+	public fun normalize (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public abstract interface class io/skein/text/spi/TextNormalizer {
+	public abstract fun normalize (Ljava/lang/String;)Ljava/lang/String;
+}
+

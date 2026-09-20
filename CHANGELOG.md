@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [2.0.0] - 2026-09-20
 
 ### Added
 
@@ -40,7 +40,7 @@ All notable changes to this project will be documented in this file.
   `TrainingParallelism` bounds concurrent fits from heap and feature count rather than core count;
   `TokenMasker` collapses high-cardinality tokens via `skein-text`'s `TypedTokenizer` (measured 59%
   fewer features, 60% smaller model); `CorpusDeduplicator` collapses rows identical once masked
-  (measured 400,000 documents to 21,420) and reports the ratio.
+  (measured 400,000 documents to ~21,000) and reports the ratio.
 - **Optional refinements** (`skein-classify`) — `TermWeightingEnum.SUBLINEAR` for `1 + ln(count)`
   weighting; `IdfVectorizer` and `DocumentFrequencyTable` for IDF over hashed buckets, with a
   document-frequency floor that scales with the corpus and a fitted table persisted alongside the
@@ -68,6 +68,40 @@ All notable changes to this project will be documented in this file.
   examples, `embedding-service` and `embedding-onnx`, train the recipe tagger on embeddings and
   score it against the hashing baseline; both print setup instructions when the service or model is
   absent.
+- **`skein-classify-embedding-http`** — a new published adapter module implementing `Vectorizer`
+  against any OpenAI-compatible `/embeddings` endpoint, so LM Studio, Ollama, llama.cpp, vLLM, Text
+  Embeddings Inference and the OpenAI API all work unchanged. Promoted out of `examples`, where it
+  was a copy-me file, because a supported route B needs a supported artifact. `EmbeddingTransport`
+  isolates the HTTP call, so the protocol is this module's business and retries, proxies and
+  connection pooling stay the caller's. `EmbeddingServiceConfig` gained `headers` for auth, kept
+  out of the fingerprint so a rotated token does not invalidate a trained model, and redacted from
+  `toString`. The only dependency beyond `skein-classify` is a JSON parser.
+- **Vector canary** (`skein-classify`) — `VectorizerCanary`, `Vectorizer.canary()` and
+  `VectorizerCanaryException`. Fixed probe texts are embedded when a model is saved and re-embedded
+  when it is loaded; a model changed on the server moves them and the load throws. This is the only
+  check that looks at what a vectorizer *does* rather than what it declares, and it is what makes
+  route B usable in production: a fingerprint cannot see a service swapping its weights, because
+  nothing in the protocol reveals them. Opt in by setting probe texts; a model saved without them
+  behaves exactly as before. Drift is measured as relative L2 rather than cosine distance, so a
+  service that starts L2-normalising its output — which rescales every vector without rotating it,
+  and breaks a classifier trained on the unnormalised ones — is caught rather than waved through.
+  `saveMultiLabel` re-checks the canary against the live vectorizer before writing, which catches a
+  model swapped *during* a long training run. `loadMultiLabel` gained `verifyCanary` to skip it,
+  and **performs network I/O when a canary is present**.
+- **`BatchVectorizer`** (`skein-classify`) — a `Vectorizer` sub-port for implementations where
+  featurising many texts at once is materially cheaper than one at a time, plus a
+  `Vectorizer.vectorizeAll(texts)` extension that uses it when present and loops when it is not.
+  Both embedding adapters implement it; `HashingVectorizer` deliberately does not, because hashing
+  a record takes microseconds and there is nothing to amortise — which is what keeps the port a
+  capability a caller can *detect* rather than a method everything claims. `MultiLabelCrossValidator`
+  now featurises a fold in one call instead of one per row: with an embedding vectorizer that was
+  one inference call, or one HTTP round trip, per row **per fold**.
+- **Binary-compatibility validation** — every published module carries an ABI dump under
+  `<module>/api/`, checked by `checkKotlinAbi` as part of `check` and re-recorded with
+  `updateKotlinAbi`. Kotlin's own ABI validation rather than the standalone
+  binary-compatibility-validator plugin, whose bundled ASM cannot read JDK 25 class files. The
+  `HashingConfig` break below was found by reading a diff; this is so the next one is not.
+- **[`docs/migration.md`](docs/migration.md)** — what a 1.2.0 consumer has to do to move to 2.0.0.
 - **Restructured documentation** — every module carries a short `README.md` stating what it is and
   when to use it, linking into depth under [`docs/`](docs). New: an
   [index](docs/README.md), [getting started](docs/getting-started.md),
@@ -79,16 +113,44 @@ All notable changes to this project will be documented in this file.
 - **[`docs/bring-your-own-data.md`](docs/bring-your-own-data.md)** — six steps from your records to a
   model, including the single question that decides single- versus multi-label.
 
+### Breaking
+
+- **`HashingConfig` gained a `termWeighting` property.** It is appended with a default, so source
+  using named or positional arguments keeps compiling, but the generated `copy` and `componentN`
+  signatures change — a binary break for anything compiled against 1.2.0. **Recompiling is the
+  whole fix.**
+- **Model file format.** Multi-label models are written at `.skein` payload version `0x03`, which
+  stores a fitted weight matrix rather than a replayable corpus. The version byte selects the
+  payload *shape*, so **a 1.x reader rejects a v3 file** at the header rather than misreading it.
+  Single-label v1 and v2 files are unaffected and load unchanged.
+- **`LoadedMultiLabelModel` gained `canary`.** Appended last with a default, so positional and
+  named construction keep compiling, but the constructor, `copy` and `componentN` signatures
+  change.
+- `ModelStore.loadMultiLabel` gained a defaulted `verifyCanary` parameter on both overloads.
+  Source-compatible; the old signatures no longer exist at the bytecode level.
+- `Vectorizer` gained `canary()` with a default implementation returning `null`, so existing
+  implementations keep compiling and linking. `BatchVectorizer` is a new sub-interface rather than
+  a method on `Vectorizer`, so nothing existing has to implement it.
+- `OnnxEmbeddingVectorizer.vectorizeAll` and `HttpEmbeddingVectorizer.vectorizeAll` are now
+  `override`s of `BatchVectorizer.vectorizeAll` rather than methods on the concrete class.
+  Source-compatible; callers holding either concrete type are unaffected.
+- **`HttpEmbeddingVectorizer` and `EmbeddingServiceConfig` moved out of `examples`** into
+  `io.skein.classify.embedding.http.{infrastructure,domain}`, in the new published module. Nothing
+  depended on `examples`, so this breaks only a copy someone took by hand — which was the
+  documented way to use it, and is the reason it is now a module.
+
 ### Changed
 
-- `HashingConfig` gained a `termWeighting` property. It is appended with a default, so source using
-  named or positional arguments keeps compiling, but the generated `copy` and `componentN`
-  signatures change — a binary break for anything compiled against 1.2.0.
 - `.ai/instructions/module-architecture.md` — `skein-classify`'s responsibility is now "assigning
   labels to a whole record — one label, or several when labels co-occur".
 
 ### Fixed
 
+- **Published POM metadata.** Every module published a POM whose `<name>` was just the artifact id
+  and whose `<description>` was the placeholder "Skein Library", discarding the `publishName` and
+  `publishDescription` each build file sets. The publishing convention is applied from a module's
+  `plugins { }` block, which runs before the body that sets those extras, so reading them eagerly
+  always saw nothing. They are read lazily now.
 - `GroupedSplitter` orders equal-sized groups by a seeded mix of their names rather than
   alphabetically. Group names encode structure, so alphabetical order correlates with it and
   round-robin assignment can line a fold up with an entire category — five methods under five folds

@@ -71,6 +71,7 @@ graph TD
     extract["skein-extract<br/><i>text → structured values</i>"]
     postgres["skein-store-postgres<br/><i>FeatureStore on PostgreSQL</i>"]
     onnx["skein-classify-embedding-onnx<br/><i>Vectorizer via ONNX model</i>"]
+    http["skein-classify-embedding-http<br/><i>Vectorizer via embedding service</i>"]
     cli["skein-cli<br/><i>label · predict · evaluate</i>"]
     bom["skein-bom<br/><i>version alignment</i>"]
 
@@ -78,6 +79,7 @@ graph TD
     text --> extract
     classify --> postgres
     classify --> onnx
+    classify --> http
     classify --> cli
 ```
 
@@ -90,12 +92,13 @@ graph TD
 | [`skein-classify`](skein-classify) | yes | Record → label(s): schema, feature hashing, learning, evaluation, persistence |
 | [`skein-extract`](skein-extract) | yes | Text → structured values: pattern DSL, slot filling, CRF tagging |
 | [`skein-classify-embedding-onnx`](skein-classify-embedding-onnx) | yes | Optional `Vectorizer` backed by an ONNX embedding model |
+| [`skein-classify-embedding-http`](skein-classify-embedding-http) | yes | Optional `Vectorizer` backed by an OpenAI-compatible embedding service |
 | [`skein-store-postgres`](skein-store-postgres) | yes | Optional PostgreSQL `FeatureStore`, AES-256-GCM at rest |
 | [`skein-cli`](skein-cli) | yes | Label, predict, evaluate from the command line |
 | [`examples`](examples) | no | Runnable samples |
 
 Heavy dependencies live only in their own adapter. Using feature hashing and an in-memory store
-pulls in neither a PostgreSQL driver nor an ONNX Runtime binary.
+pulls in no PostgreSQL driver, no ONNX Runtime binary and no JSON parser.
 
 ## Documentation
 
@@ -108,6 +111,7 @@ pulls in neither a PostgreSQL driver nor an ONNX Runtime binary.
 | [Bring your own data](docs/bring-your-own-data.md) | Six steps from your records to a model you can defend |
 | [Classification](docs/classify/README.md) | Schema, featurisation, single- and multi-label, evaluation, scale |
 | [Embeddings](docs/embeddings/README.md) | When they are worth it, and the two integration routes |
+| [Migrating to 2.0.0](docs/migration.md) | What a 1.2.0 consumer has to change |
 
 ## A note on the privacy claim
 
@@ -122,6 +126,9 @@ Two things are different and worth knowing:
 - An **embedding vectorizer** produces a lossy but real representation of the text, and an external
   embedding *service* means the text leaves your process. See
   [Embeddings](docs/embeddings/README.md).
+- A **vector canary**, if you enable one, stores its probe texts in the model file in clear. They
+  are texts you choose, so keep them short and synthetic and never take them from your corpus. See
+  [ADR 0002](docs/adr/0002-vector-canary.md).
 
 ## Publishing
 

@@ -39,10 +39,7 @@ fun runLocalOnnxEmbeddingExample() {
         println("dimension : ${vectorizer.dimension()}")
         println("fingerprint digest: ${vectorizer.fingerprint().configDigest.take(n = 16)}...")
 
-        val metrics = EmbeddingComparison.evaluate(
-            vectorizer = vectorizer,
-            batched = { texts -> vectorizer.vectorizeAll(texts = texts) },
-        )
+        val metrics = EmbeddingComparison.evaluate(vectorizer = vectorizer)
         EmbeddingComparison.report(embeddingName = modelPath.fileName.toString(), embedding = metrics)
 
         println()

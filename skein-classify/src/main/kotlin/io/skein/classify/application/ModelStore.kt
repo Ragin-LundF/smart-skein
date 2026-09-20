@@ -20,6 +20,7 @@ import io.skein.classify.domain.SchemaBuilder
 import io.skein.classify.domain.SensitivityEnum
 import io.skein.classify.domain.TermWeightingEnum
 import io.skein.classify.domain.TextField
+import io.skein.classify.domain.VectorizerCanary
 import io.skein.classify.domain.VectorizerFingerprint
 import io.skein.classify.domain.WeightEncodingEnum
 import io.skein.classify.infrastructure.MultiLabelLogisticClassifier
@@ -137,6 +138,21 @@ private class MultiLabelModelDto(
     val documentCount: Int = 0,
     val minimumDocumentFrequency: Int = 1,
     val documentFrequencies: IntArray = IntArray(size = 0),
+    // Appended: present only when the vectorizer offered a canary at save time. Held flat and
+    // row-major, stride vectorizerDimension, for the same reason the weights are -- packed
+    // ProtoBuf floats rather than a length prefix per row.
+    val hasCanary: Boolean = false,
+    val canaryProbes: List<String> = emptyList(),
+    val canaryVectors: FloatArray = FloatArray(size = 0),
+    val canaryTolerance: Double = VectorizerCanary.DEFAULT_TOLERANCE,
+)
+
+/** The four DTO fields a canary occupies, so building them adds no branches to a save. */
+private class CanaryFields(
+    val present: Boolean,
+    val probes: List<String>,
+    val vectors: FloatArray,
+    val tolerance: Double,
 )
 
 object ModelStore {
@@ -315,6 +331,7 @@ object ModelStore {
         val weights = model.weights()
         val encoding = WeightCodec.narrowestEncoding(weights = weights.weights)
         val fingerprint = vectorizer.fingerprint()
+        val canaryFields = canaryFields(canary = capturedCanary(vectorizer = vectorizer))
         val documentFrequencies = (vectorizer as? IdfVectorizer)?.table()
         val tuned = thresholds.asMap().entries.sortedBy { entry -> entry.key.value }
         val dto = MultiLabelModelDto(
@@ -349,6 +366,10 @@ object ModelStore {
             documentCount = documentFrequencies?.documentCount ?: 0,
             minimumDocumentFrequency = documentFrequencies?.minimumDocumentFrequency ?: 1,
             documentFrequencies = documentFrequencies?.frequencies ?: IntArray(size = 0),
+            hasCanary = canaryFields.present,
+            canaryProbes = canaryFields.probes,
+            canaryVectors = canaryFields.vectors,
+            canaryTolerance = canaryFields.tolerance,
         )
         val encoded = ProtoBuf.encodeToByteArray(serializer = MultiLabelModelDto.serializer(), value = dto)
         path.outputStream().use { file ->
@@ -370,9 +391,14 @@ object ModelStore {
     fun loadMultiLabel(
         path: Path,
         vectorizerFactory: (DocumentFrequencyTable?) -> Vectorizer,
+        verifyCanary: Boolean = true,
     ): LoadedMultiLabelModel {
         val dto = readMultiLabelDto(path = path)
-        return decodeMultiLabel(dto = dto, vectorizer = vectorizerFactory(documentFrequencyTable(dto = dto)))
+        return decodeMultiLabel(
+            dto = dto,
+            vectorizer = vectorizerFactory(documentFrequencyTable(dto = dto)),
+            verifyCanary = verifyCanary,
+        )
     }
 
     /**
@@ -382,14 +408,111 @@ object ModelStore {
      * featurisation does not throw on its own and does not look wrong in the output — it simply
      * returns confident, incorrect labels for as long as nobody notices. See
      * [VectorizerMismatchException].
+     *
+     * **This can perform I/O beyond reading the file.** When the model carries a
+     * [io.skein.classify.domain.VectorizerCanary], its probe texts are re-embedded through
+     * [vectorizer] and compared, which for an embedding *service* means one network round trip per
+     * probe — so opening a file can now block, or fail because the service is down. That is the
+     * trade the canary buys: a loud failure at load instead of a silent one at inference. Pass
+     * `verifyCanary = false` to skip it, and see [VectorizerCanaryException] for when to.
+     *
+     * A model saved without a canary is unaffected, and this parameter does nothing.
      */
-    fun loadMultiLabel(path: Path, vectorizer: Vectorizer): LoadedMultiLabelModel {
-        return decodeMultiLabel(dto = readMultiLabelDto(path = path), vectorizer = vectorizer)
+    fun loadMultiLabel(
+        path: Path,
+        vectorizer: Vectorizer,
+        verifyCanary: Boolean = true,
+    ): LoadedMultiLabelModel {
+        return decodeMultiLabel(
+            dto = readMultiLabelDto(path = path),
+            vectorizer = vectorizer,
+            verifyCanary = verifyCanary,
+        )
     }
 
     private fun readMultiLabelDto(path: Path): MultiLabelModelDto {
         val bytes = readPayload(path = path, accepted = listOf(VERSION_MULTI_LABEL))
         return ProtoBuf.decodeFromByteArray(deserializer = MultiLabelModelDto.serializer(), bytes = bytes)
+    }
+
+    /**
+     * The vectorizer's canary, re-checked against the vectorizer **now**, at save time.
+     *
+     * The second check is the point. A canary captured before training proves what the vectorizer
+     * produced then; capturing again here proves it still produces the same thing after the whole
+     * corpus has gone through it. Without this, a model swapped on the server *during* a long
+     * training run leaves half the corpus embedded by one model and half by another, and a canary
+     * taken before the run still matches at load. The result is a model that is quietly garbage and
+     * passes every check.
+     */
+    private fun capturedCanary(vectorizer: Vectorizer): VectorizerCanary? {
+        val canary = vectorizer.canary() ?: return null
+        verifyCanary(canary = canary, vectorizer = vectorizer)
+        return canary
+    }
+
+    /** Re-embeds a canary's probes through [vectorizer] and throws if they have moved. */
+    private fun verifyCanary(canary: VectorizerCanary, vectorizer: Vectorizer) {
+        val observed = canary.probes.map { probe ->
+            dense(vector = vectorizer.vectorize(text = probe), width = canary.dimension())
+        }
+        val worst = canary.worstDrift(observed = observed)
+        if (worst.distance > canary.tolerance) {
+            throw VectorizerCanaryException(canary = canary, probe = worst.probe, drift = worst.distance)
+        }
+    }
+
+    /** The canary flattened into the shape the DTO stores, or the empty defaults when absent. */
+    private fun canaryFields(canary: VectorizerCanary?): CanaryFields {
+        return CanaryFields(
+            present = canary != null,
+            probes = canary?.probes.orEmpty(),
+            vectors = flatten(vectors = canary?.references.orEmpty()),
+            tolerance = canary?.tolerance ?: VectorizerCanary.DEFAULT_TOLERANCE,
+        )
+    }
+
+    /**
+     * Widens a [FeatureVector] to a dense array so a sparse vectorizer can carry a canary too.
+     *
+     * An embedding vectorizer already emits a dense run of indices, but nothing in the port
+     * promises that, and reading [FeatureVector.values] directly would silently compare the wrong
+     * positions for anything that does not.
+     */
+    private fun dense(vector: FeatureVector, width: Int): FloatArray {
+        val dense = FloatArray(size = width)
+        for (position in vector.indices.indices) {
+            val index = vector.indices[position]
+            if (index in 0 until width) {
+                dense[index] = vector.values[position]
+            }
+        }
+        return dense
+    }
+
+    private fun flatten(vectors: List<FloatArray>): FloatArray {
+        if (vectors.isEmpty()) {
+            return FloatArray(size = 0)
+        }
+        val flat = FloatArray(size = vectors.size * vectors.first().size)
+        vectors.forEachIndexed { row, vector ->
+            vector.copyInto(destination = flat, destinationOffset = row * vector.size)
+        }
+        return flat
+    }
+
+    private fun storedCanary(dto: MultiLabelModelDto): VectorizerCanary? {
+        if (!dto.hasCanary) {
+            return null
+        }
+        val width = dto.vectorizerDimension
+        return VectorizerCanary(
+            probes = dto.canaryProbes,
+            references = dto.canaryProbes.indices.map { row ->
+                dto.canaryVectors.copyOfRange(fromIndex = row * width, toIndex = (row + 1) * width)
+            },
+            tolerance = dto.canaryTolerance,
+        )
     }
 
     private fun documentFrequencyTable(dto: MultiLabelModelDto): DocumentFrequencyTable? {
@@ -403,7 +526,11 @@ object ModelStore {
         )
     }
 
-    private fun decodeMultiLabel(dto: MultiLabelModelDto, vectorizer: Vectorizer): LoadedMultiLabelModel {
+    private fun decodeMultiLabel(
+        dto: MultiLabelModelDto,
+        vectorizer: Vectorizer,
+        verifyCanary: Boolean,
+    ): LoadedMultiLabelModel {
         val stored = VectorizerFingerprint(
             kind = dto.vectorizerKind,
             dimension = dto.vectorizerDimension,
@@ -412,6 +539,13 @@ object ModelStore {
         val supplied = vectorizer.fingerprint()
         if (stored != supplied) {
             throw VectorizerMismatchException(expected = stored, actual = supplied)
+        }
+        // Fingerprint first, canary second. The fingerprint is free; the canary costs one call
+        // per probe, which for a remote service is a network round trip. A model loaded with
+        // outright the wrong vectorizer must not pay for those before failing.
+        val canary = storedCanary(dto = dto)
+        if (canary != null && verifyCanary) {
+            verifyCanary(canary = canary, vectorizer = vectorizer)
         }
         val encoding = WeightEncodingEnum.entries[dto.weightEncoding]
         val weights = MultiLabelWeights(
@@ -431,6 +565,7 @@ object ModelStore {
                 tuning = ClassifierHyperparameters(l2Regularization = dto.l2Regularization),
             ),
             fingerprint = stored,
+            canary = canary,
             thresholds = LabelThresholds(
                 byLabel = dto.tunedThresholdLabels.indices.associate { index ->
                     Label(value = dto.tunedThresholdLabels[index]) to dto.tunedThresholds[index]

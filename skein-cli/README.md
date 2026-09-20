@@ -34,7 +34,10 @@ dependencies {
 
 ## Documentation
 
-**[Full documentation →](../docs/cli/README.md)** — every command and flag, the CSV contract, the
-active-learning loop, persistence and privacy notes, and behaviour on large pools.
+**[Full documentation →](../docs/cli/README.md)** — the commands and the active-learning loop,
+with a page each for [every flag and the CSV contract](../docs/cli/flags.md),
+[installing it locally](../docs/cli/install.md),
+[`evaluate` and large pools](../docs/cli/evaluate.md), and
+[abstention, persistence and privacy](../docs/cli/predict.md).
 
 Related: [Evaluation](../docs/classify/evaluation.md) · [All documentation](../docs/README.md)

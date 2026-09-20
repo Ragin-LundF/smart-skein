@@ -8,7 +8,7 @@ import io.skein.classify.embedding.onnx.domain.NormalizationEnum
 import io.skein.classify.embedding.onnx.domain.PoolingStrategyEnum
 import io.skein.classify.embedding.onnx.spi.EmbeddingRuntime
 import io.skein.classify.embedding.onnx.spi.EmbeddingTokenizer
-import io.skein.classify.spi.Vectorizer
+import io.skein.classify.spi.BatchVectorizer
 import java.nio.file.Path
 import java.security.MessageDigest
 import kotlin.io.path.inputStream
@@ -20,7 +20,8 @@ private const val KIND = "onnx-embedding"
 private const val DIGEST_BUFFER_BYTES = 1 shl 16
 
 /**
- * A [Vectorizer] backed by an external sentence-embedding model run through ONNX Runtime.
+ * A [io.skein.classify.spi.Vectorizer] backed by an external sentence-embedding model run through
+ * ONNX Runtime.
  *
  * **What this buys.** Hashed n-grams match literal text: a model trained on "eggplant" learns
  * nothing about "aubergine". An embedding places related wording nearby in vector space, so the
@@ -46,16 +47,17 @@ class OnnxEmbeddingVectorizer(
     private val pooling: PoolingStrategyEnum = PoolingStrategyEnum.MEAN,
     private val normalization: NormalizationEnum = NormalizationEnum.L2,
     private val cache: EmbeddingCache? = null,
-) : Vectorizer, AutoCloseable {
+) : BatchVectorizer, AutoCloseable {
 
     private val fingerprint: VectorizerFingerprint = buildFingerprint()
 
     /**
      * Embeds one text.
      *
-     * Present because [Vectorizer] requires it, and it is the slow path: it runs the model on a
-     * batch of one, paying the full per-call overhead for a single record. Prefer [vectorizeAll]
-     * whenever more than one record is in hand — which, during training, is always.
+     * Present because [io.skein.classify.spi.Vectorizer] requires it, and it is the slow path: it
+     * runs the model on a batch of one, paying the full per-call overhead for a single record.
+     * Prefer [vectorizeAll] whenever more than one record is in hand — which, during training, is
+     * always.
      */
     override fun vectorize(text: String): FeatureVector {
         return vectorizeAll(texts = listOf(text)).single()
@@ -68,7 +70,7 @@ class OnnxEmbeddingVectorizer(
      * corpus with repeated records — which, after masking, most real corpora are — therefore costs
      * one forward pass per *distinct* record rather than per record.
      */
-    fun vectorizeAll(texts: List<String>): List<FeatureVector> {
+    override fun vectorizeAll(texts: List<String>): List<FeatureVector> {
         if (texts.isEmpty()) {
             return emptyList()
         }

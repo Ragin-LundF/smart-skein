@@ -38,8 +38,11 @@ dependencies {
 
 ## Documentation
 
-**[Full documentation →](../docs/text/README.md)** — normalization rules, the SymSpell-backed
-word repairer and its frequency model, tokenization modes, locale-specific pattern configuration,
-and pattern signatures.
+**[Full documentation →](../docs/text/README.md)** — the mental model, installation and the
+end-to-end flow, with a page each for
+[normalization](../docs/text/normalization.md),
+[typed tokenization](../docs/text/tokenization.md),
+[pattern signatures](../docs/text/signatures.md) and
+[broken-word repair](../docs/text/word-repair.md).
 
 Related: [Architecture](../docs/architecture.md) · [All documentation](../docs/README.md)

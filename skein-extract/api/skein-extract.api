@@ -1,0 +1,284 @@
+public final class io/skein/extract/application/PatternMatcher {
+	public static final field NO_MATCH I
+	public fun <init> ()V
+	public fun <init> (Lio/skein/text/application/TypedTokenizer;)V
+	public synthetic fun <init> (Lio/skein/text/application/TypedTokenizer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun findAll (Ljava/lang/String;Lio/skein/extract/domain/TokenPattern;)Ljava/util/List;
+	public final fun findAll (Ljava/util/List;Lio/skein/extract/domain/TokenPattern;)Ljava/util/List;
+	public final fun matchesFully (Ljava/util/List;Lio/skein/extract/domain/TokenPattern;)Z
+}
+
+public final class io/skein/extract/application/SlotExtractor {
+	public fun <init> ()V
+	public fun <init> (Lio/skein/text/application/TypedTokenizer;)V
+	public synthetic fun <init> (Lio/skein/text/application/TypedTokenizer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun extract (Ljava/lang/String;Ljava/util/List;)Lio/skein/extract/domain/ExtractionResult;
+	public final fun extract (Ljava/util/List;Ljava/util/List;)Lio/skein/extract/domain/ExtractionResult;
+}
+
+public final class io/skein/extract/application/TemplateClusterer {
+	public fun <init> ()V
+	public fun <init> (Lio/skein/text/application/TypedTokenizer;)V
+	public synthetic fun <init> (Lio/skein/text/application/TypedTokenizer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun cluster (Ljava/util/List;)Ljava/util/List;
+}
+
+public final class io/skein/extract/domain/ExtractedField {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/skein/extract/domain/SourceSpan;DLjava/lang/Integer;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/skein/extract/domain/SourceSpan;DLjava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lio/skein/extract/domain/SourceSpan;
+	public final fun component4 ()D
+	public final fun component5 ()Ljava/lang/Integer;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lio/skein/extract/domain/SourceSpan;DLjava/lang/Integer;)Lio/skein/extract/domain/ExtractedField;
+	public static synthetic fun copy$default (Lio/skein/extract/domain/ExtractedField;Ljava/lang/String;Ljava/lang/String;Lio/skein/extract/domain/SourceSpan;DLjava/lang/Integer;ILjava/lang/Object;)Lio/skein/extract/domain/ExtractedField;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getConfidence ()D
+	public final fun getGroupIndex ()Ljava/lang/Integer;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSpan ()Lio/skein/extract/domain/SourceSpan;
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/extract/domain/ExtractionResult {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lio/skein/extract/domain/ExtractionResult;
+	public static synthetic fun copy$default (Lio/skein/extract/domain/ExtractionResult;Ljava/util/List;ILjava/lang/Object;)Lio/skein/extract/domain/ExtractionResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun first (Ljava/lang/String;)Lio/skein/extract/domain/ExtractedField;
+	public final fun getFields ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public final fun valuesOf (Ljava/lang/String;)Ljava/util/List;
+}
+
+public final class io/skein/extract/domain/GroupComponent {
+	public fun <init> (Ljava/lang/String;Lio/skein/text/domain/TokenTypeEnum;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lio/skein/text/domain/TokenTypeEnum;
+	public final fun copy (Ljava/lang/String;Lio/skein/text/domain/TokenTypeEnum;)Lio/skein/extract/domain/GroupComponent;
+	public static synthetic fun copy$default (Lio/skein/extract/domain/GroupComponent;Ljava/lang/String;Lio/skein/text/domain/TokenTypeEnum;ILjava/lang/Object;)Lio/skein/extract/domain/GroupComponent;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun getType ()Lio/skein/text/domain/TokenTypeEnum;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/extract/domain/KeyAnchoredSlot : io/skein/extract/domain/SlotDefinition {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/skein/text/domain/TokenTypeEnum;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/skein/text/domain/TokenTypeEnum;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lio/skein/text/domain/TokenTypeEnum;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lio/skein/text/domain/TokenTypeEnum;)Lio/skein/extract/domain/KeyAnchoredSlot;
+	public static synthetic fun copy$default (Lio/skein/extract/domain/KeyAnchoredSlot;Ljava/lang/String;Ljava/lang/String;Lio/skein/text/domain/TokenTypeEnum;ILjava/lang/Object;)Lio/skein/extract/domain/KeyAnchoredSlot;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAnchor ()Ljava/lang/String;
+	public fun getName ()Ljava/lang/String;
+	public final fun getTargetType ()Lio/skein/text/domain/TokenTypeEnum;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/extract/domain/PatternElement {
+	public fun <init> (Lio/skein/text/domain/TokenTypeEnum;Lio/skein/extract/domain/QuantifierEnum;)V
+	public synthetic fun <init> (Lio/skein/text/domain/TokenTypeEnum;Lio/skein/extract/domain/QuantifierEnum;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/skein/text/domain/TokenTypeEnum;
+	public final fun component2 ()Lio/skein/extract/domain/QuantifierEnum;
+	public final fun copy (Lio/skein/text/domain/TokenTypeEnum;Lio/skein/extract/domain/QuantifierEnum;)Lio/skein/extract/domain/PatternElement;
+	public static synthetic fun copy$default (Lio/skein/extract/domain/PatternElement;Lio/skein/text/domain/TokenTypeEnum;Lio/skein/extract/domain/QuantifierEnum;ILjava/lang/Object;)Lio/skein/extract/domain/PatternElement;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getQuantifier ()Lio/skein/extract/domain/QuantifierEnum;
+	public final fun getType ()Lio/skein/text/domain/TokenTypeEnum;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/extract/domain/PositionalSlot : io/skein/extract/domain/SlotDefinition {
+	public fun <init> (Ljava/lang/String;I)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy (Ljava/lang/String;I)Lio/skein/extract/domain/PositionalSlot;
+	public static synthetic fun copy$default (Lio/skein/extract/domain/PositionalSlot;Ljava/lang/String;IILjava/lang/Object;)Lio/skein/extract/domain/PositionalSlot;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getName ()Ljava/lang/String;
+	public final fun getTokenIndex ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/extract/domain/QuantifierEnum : java/lang/Enum {
+	public static final field ONE Lio/skein/extract/domain/QuantifierEnum;
+	public static final field ONE_OR_MORE Lio/skein/extract/domain/QuantifierEnum;
+	public static final field OPTIONAL Lio/skein/extract/domain/QuantifierEnum;
+	public static final field ZERO_OR_MORE Lio/skein/extract/domain/QuantifierEnum;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/skein/extract/domain/QuantifierEnum;
+	public static fun values ()[Lio/skein/extract/domain/QuantifierEnum;
+}
+
+public final class io/skein/extract/domain/RepeatingGroupSlot : io/skein/extract/domain/SlotDefinition {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Lio/skein/extract/domain/RepeatingGroupSlot;
+	public static synthetic fun copy$default (Lio/skein/extract/domain/RepeatingGroupSlot;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lio/skein/extract/domain/RepeatingGroupSlot;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getComponents ()Ljava/util/List;
+	public fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class io/skein/extract/domain/SlotDefinition {
+	public abstract fun getName ()Ljava/lang/String;
+}
+
+public final class io/skein/extract/domain/SourceSpan {
+	public fun <init> (II)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun copy (II)Lio/skein/extract/domain/SourceSpan;
+	public static synthetic fun copy$default (Lio/skein/extract/domain/SourceSpan;IIILjava/lang/Object;)Lio/skein/extract/domain/SourceSpan;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEndOffset ()I
+	public final fun getStartOffset ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/extract/domain/Tag {
+	public static final synthetic fun box-impl (Ljava/lang/String;)Lio/skein/extract/domain/Tag;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class io/skein/extract/domain/TemplateCluster {
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-Z_K8ePM ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy-8av7qLQ (Ljava/util/List;Ljava/util/List;)Lio/skein/extract/domain/TemplateCluster;
+	public static synthetic fun copy-8av7qLQ$default (Lio/skein/extract/domain/TemplateCluster;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lio/skein/extract/domain/TemplateCluster;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMembers ()Ljava/util/List;
+	public final fun getSignature-Z_K8ePM ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/extract/domain/TokenPattern {
+	public static final field Companion Lio/skein/extract/domain/TokenPattern$Companion;
+	public final fun getElements ()Ljava/util/List;
+}
+
+public final class io/skein/extract/domain/TokenPattern$Companion {
+	public final fun of (Lkotlin/jvm/functions/Function1;)Lio/skein/extract/domain/TokenPattern;
+}
+
+public final class io/skein/extract/domain/TokenPatternBuilder {
+	public fun <init> ()V
+	public final fun build ()Lio/skein/extract/domain/TokenPattern;
+	public final fun oneOrMore (Lio/skein/text/domain/TokenTypeEnum;)V
+	public final fun optional (Lio/skein/text/domain/TokenTypeEnum;)V
+	public final fun type (Lio/skein/text/domain/TokenTypeEnum;)V
+	public final fun zeroOrMore (Lio/skein/text/domain/TokenTypeEnum;)V
+}
+
+public final class io/skein/extract/infrastructure/CrfModelMetadata {
+	public fun <init> (IILjava/time/Instant;Ljava/lang/String;Lio/skein/extract/infrastructure/FeatureRetentionEnum;I)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()Ljava/time/Instant;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Lio/skein/extract/infrastructure/FeatureRetentionEnum;
+	public final fun component6 ()I
+	public final fun copy (IILjava/time/Instant;Ljava/lang/String;Lio/skein/extract/infrastructure/FeatureRetentionEnum;I)Lio/skein/extract/infrastructure/CrfModelMetadata;
+	public static synthetic fun copy$default (Lio/skein/extract/infrastructure/CrfModelMetadata;IILjava/time/Instant;Ljava/lang/String;Lio/skein/extract/infrastructure/FeatureRetentionEnum;IILjava/lang/Object;)Lio/skein/extract/infrastructure/CrfModelMetadata;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCreatedAt ()Ljava/time/Instant;
+	public final fun getFormatMajor ()I
+	public final fun getFormatMinor ()I
+	public final fun getMinLexicalOccurrences ()I
+	public final fun getRetention ()Lio/skein/extract/infrastructure/FeatureRetentionEnum;
+	public final fun getWriterVersion ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/extract/infrastructure/CrfModelSnapshot {
+	public fun <init> (Ljava/util/List;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;DDDJ)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun component4 ()Ljava/util/Map;
+	public final fun component5 ()Ljava/util/Map;
+	public final fun component6 ()D
+	public final fun component7 ()D
+	public final fun component8 ()D
+	public final fun component9 ()J
+	public final fun copy (Ljava/util/List;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;DDDJ)Lio/skein/extract/infrastructure/CrfModelSnapshot;
+	public static synthetic fun copy$default (Lio/skein/extract/infrastructure/CrfModelSnapshot;Ljava/util/List;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;Ljava/util/Map;DDDJILjava/lang/Object;)Lio/skein/extract/infrastructure/CrfModelSnapshot;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDecayRate ()D
+	public final fun getFeatureCounts ()Ljava/util/Map;
+	public final fun getInitialLearningRate ()D
+	public final fun getL2Regularization ()D
+	public final fun getStartWeights ()Ljava/util/Map;
+	public final fun getStateWeights ()Ljava/util/Map;
+	public final fun getStep ()J
+	public final fun getTagOrder ()Ljava/util/List;
+	public final fun getTransitionWeights ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/extract/infrastructure/CrfModelStore {
+	public static final field DEFAULT_MIN_LEXICAL_OCCURRENCES I
+	public static final field INSTANCE Lio/skein/extract/infrastructure/CrfModelStore;
+	public final fun load (Ljava/nio/file/Path;)Lio/skein/extract/infrastructure/CrfModelSnapshot;
+	public final fun metadata (Ljava/nio/file/Path;)Lio/skein/extract/infrastructure/CrfModelMetadata;
+	public final fun save (Ljava/nio/file/Path;Lio/skein/extract/infrastructure/CrfModelSnapshot;Lio/skein/extract/infrastructure/FeatureRetentionEnum;I)V
+	public static synthetic fun save$default (Lio/skein/extract/infrastructure/CrfModelStore;Ljava/nio/file/Path;Lio/skein/extract/infrastructure/CrfModelSnapshot;Lio/skein/extract/infrastructure/FeatureRetentionEnum;IILjava/lang/Object;)V
+}
+
+public final class io/skein/extract/infrastructure/CrfSequenceLabeler : io/skein/extract/spi/SequenceLabeler {
+	public static final field Companion Lio/skein/extract/infrastructure/CrfSequenceLabeler$Companion;
+	public fun <init> ()V
+	public fun <init> (DDD)V
+	public synthetic fun <init> (DDDILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun label (Ljava/util/List;)Ljava/util/List;
+	public fun learn (Ljava/util/List;Ljava/util/List;)V
+	public final fun snapshot ()Lio/skein/extract/infrastructure/CrfModelSnapshot;
+}
+
+public final class io/skein/extract/infrastructure/CrfSequenceLabeler$Companion {
+	public final fun from (Lio/skein/extract/infrastructure/CrfModelSnapshot;)Lio/skein/extract/infrastructure/CrfSequenceLabeler;
+}
+
+public final class io/skein/extract/infrastructure/FeatureRetentionEnum : java/lang/Enum {
+	public static final field ALL_FEATURES Lio/skein/extract/infrastructure/FeatureRetentionEnum;
+	public static final field FREQUENT_ONLY Lio/skein/extract/infrastructure/FeatureRetentionEnum;
+	public static final field STRUCTURAL_ONLY Lio/skein/extract/infrastructure/FeatureRetentionEnum;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/skein/extract/infrastructure/FeatureRetentionEnum;
+	public static fun values ()[Lio/skein/extract/infrastructure/FeatureRetentionEnum;
+}
+
+public abstract interface class io/skein/extract/spi/SequenceLabeler {
+	public abstract fun label (Ljava/util/List;)Ljava/util/List;
+	public abstract fun learn (Ljava/util/List;Ljava/util/List;)V
+}
+

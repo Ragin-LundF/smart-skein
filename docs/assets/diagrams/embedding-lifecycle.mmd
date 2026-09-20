@@ -15,7 +15,10 @@ sequenceDiagram
     You->>L: fit(observations)
     L-->>You: MultiLabelClassifier
     You->>S: saveMultiLabel(model, vectorizer)
-    note right of S: the vectorizer fingerprint<br/>is written into the file
+    S->>V: canary()
+    V->>M: embed each probe
+    M-->>V: reference vectors
+    note right of S: the fingerprint and the canary<br/>are written into the file
     end
 
     rect rgb(240, 253, 244)
@@ -25,11 +28,18 @@ sequenceDiagram
     alt fingerprints differ
         S-->>You: VectorizerMismatchException
     else fingerprints match
-        S-->>You: model
-        You->>V: vectorize(record)
+        S->>V: re-embed the stored probes
         V->>M: embed
-        M-->>V: dense vector
-        V-->>You: FeatureVector
-        You->>You: model.predict(features, threshold)
+        M-->>V: vectors now
+        alt drifted past the tolerance
+            S-->>You: VectorizerCanaryException
+        else unchanged
+            S-->>You: model
+            You->>V: vectorize(record)
+            V->>M: embed
+            M-->>V: dense vector
+            V-->>You: FeatureVector
+            You->>You: model.predict(features, threshold)
+        end
     end
     end

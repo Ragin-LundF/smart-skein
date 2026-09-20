@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm")
     application
     id("skein.published-library-conventions")
+    id("skein.api-conventions")
 }
 
 description = "Skein CLI: command-line tools for training and inspecting classifiers."

@@ -1,10 +1,13 @@
 package io.skein.classify.application
 
+import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.HashingConfig
 import io.skein.classify.domain.Label
 import io.skein.classify.domain.MultiLabeledText
+import io.skein.classify.domain.VectorizerFingerprint
 import io.skein.classify.infrastructure.LbfgsMultiLabelLearner
 import io.skein.classify.spi.BatchLearner
+import io.skein.classify.spi.BatchVectorizer
 import io.skein.classify.spi.Vectorizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -181,5 +184,58 @@ internal class MultiLabelCrossValidatorTest {
                 learnerFactory = { learner() },
             )
         }
+    }
+
+    /**
+     * Counts how a fold is featurised. Cross-validation runs every row through a vectorizer once
+     * per fold, so a per-row loop here is one inference call — or one HTTP round trip — per row
+     * per fold.
+     */
+    private class CountingBatchVectorizer(private val width: Int) : BatchVectorizer {
+        var batchCalls: Int = 0
+            private set
+
+        var singleCalls: Int = 0
+            private set
+
+        override fun vectorize(text: String): FeatureVector {
+            singleCalls += 1
+            return one(text = text)
+        }
+
+        override fun vectorizeAll(texts: List<String>): List<FeatureVector> {
+            batchCalls += 1
+            return texts.map { text -> one(text = text) }
+        }
+
+        override fun dimension(): Int = width
+
+        override fun fingerprint(): VectorizerFingerprint =
+            VectorizerFingerprint(kind = "counting", dimension = width, configDigest = "d")
+
+        private fun one(text: String): FeatureVector {
+            val bucket = Math.floorMod(text.hashCode(), width)
+            return FeatureVector(indices = intArrayOf(bucket), values = floatArrayOf(1.0f))
+        }
+    }
+
+    @Test
+    internal fun `each fold featurises in batches rather than row by row`() {
+        val counting = CountingBatchVectorizer(width = featureCount)
+
+        validator.crossValidate(
+            corpus = ruleGeneratedCorpus(grouped = true),
+            vectorizerFactory = { counting },
+            learnerFactory = { learner() },
+            folds = 5,
+        )
+
+        // Two calls per fold: the training rows, then the holdout rows.
+        assertEquals(expected = 10, actual = counting.batchCalls)
+        assertEquals(
+            expected = 0,
+            actual = counting.singleCalls,
+            message = "cross-validation fell back to per-row vectorization despite a BatchVectorizer",
+        )
     }
 }

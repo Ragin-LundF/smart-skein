@@ -14,6 +14,7 @@ graph TD
     extract["skein-extract<br/><i>text → structured values</i>"]
     postgres["skein-store-postgres<br/><i>FeatureStore on PostgreSQL</i>"]
     onnx["skein-classify-embedding-onnx<br/><i>Vectorizer via ONNX model</i>"]
+    http["skein-classify-embedding-http<br/><i>Vectorizer via embedding service</i>"]
     cli["skein-cli<br/><i>label · predict · evaluate</i>"]
     bom["skein-bom<br/><i>version alignment</i>"]
 
@@ -21,25 +22,28 @@ graph TD
     text --> extract
     classify --> postgres
     classify --> onnx
+    classify --> http
     classify --> cli
 ```
 
 </details>
 
-`skein-text` depends on nothing. Everything else builds on it, and the two adapters
-(`skein-store-postgres`, `skein-classify-embedding-onnx`) depend on `skein-classify` because that
-is where the ports they implement live — never the other way round.
+`skein-text` depends on nothing. Everything else builds on it, and the three adapters
+(`skein-store-postgres`, `skein-classify-embedding-onnx`, `skein-classify-embedding-http`) depend
+on `skein-classify` because that is where the ports they implement live — never the other way
+round.
 
-That direction is what keeps heavy dependencies optional. PostgreSQL drivers and ONNX Runtime
-native binaries exist only inside their own adapter, so a consumer using feature hashing and an
-in-memory store inherits neither.
+That direction is what keeps heavy dependencies optional. PostgreSQL drivers, ONNX Runtime native
+binaries and a JSON parser exist only inside their own adapter, so a consumer using feature hashing
+and an in-memory store inherits none of them.
 
 | Module | Published | Depends on | Reach for it when |
 |---|---|---|---|
 | [`skein-text`](../skein-text) | yes | — | You need normalization, broken-word repair, or typed tokens on their own |
 | [`skein-classify`](../skein-classify) | yes | `skein-text` | You want to assign labels to whole records |
 | [`skein-extract`](../skein-extract) | yes | `skein-text` | You want structured values *out of* text |
-| [`skein-classify-embedding-onnx`](../skein-classify-embedding-onnx) | yes | `skein-classify` | Literal wording is not enough and you need semantic features |
+| [`skein-classify-embedding-onnx`](../skein-classify-embedding-onnx) | yes | `skein-classify` | Literal wording is not enough and you need semantic features, in-process |
+| [`skein-classify-embedding-http`](../skein-classify-embedding-http) | yes | `skein-classify` | Same, but from an embedding service you already run |
 | [`skein-store-postgres`](../skein-store-postgres) | yes | `skein-classify` | Training data must outlive the process |
 | [`skein-cli`](../skein-cli) | yes | `skein-classify` | You want to label, predict or evaluate without writing code |
 | [`skein-bom`](../skein-bom) | yes | — | Always: it aligns the versions |
@@ -130,9 +134,11 @@ Implement a port, pass it in. Each lives in the module that needs it.
 | Port | Module | Implement it to |
 |---|---|---|
 | `Vectorizer` | `skein-classify` | Feed features from your own source — an embedding model, a hand-built representation |
+| `BatchVectorizer` | `skein-classify` | Same, when featurising many texts at once is materially cheaper than one at a time |
 | `Classifier` | `skein-classify` | Add a single-label learning algorithm |
 | `MultiLabelClassifier` / `BatchLearner` | `skein-classify` | Add a multi-label model or a different optimiser |
 | `FeatureStore` | `skein-classify` | Keep training data somewhere other than memory or PostgreSQL |
 | `RecordSource` | `skein-classify` | Stream records from your own system |
 | `TextNormalizer` | `skein-text` | Change how text is folded before tokenization |
 | `EmbeddingRuntime` / `EmbeddingTokenizer` | `skein-classify-embedding-onnx` | Swap the inference engine or the tokenizer |
+| `EmbeddingTransport` | `skein-classify-embedding-http` | Add retries, a proxy, or your own HTTP client |

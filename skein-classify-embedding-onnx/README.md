@@ -26,7 +26,7 @@ of records per second, or when feature material must stay irreversible and local
 | Static embeddings | ~100–200 µs | 5,000–10,000/s |
 | MiniLM-class transformer, int8 | ~1–3 ms | 300–1,000/s per core |
 
-The classifier itself gets *smaller*: 384 dimensions × 237 labels × 4 bytes is 364 KB, against
+The classifier itself gets *smaller*: 384 dimensions × ~240 labels × 4 bytes is ~370 KB, against
 17 MB for a sparse n-gram model. The artifact that matters becomes the embedding model.
 
 **Measure before adopting.** `./gradlew :examples:run --args="embedding-onnx"` trains the same
@@ -48,6 +48,9 @@ OnnxEmbeddingVectorizer.open(
     // train exactly as with hashed features — nothing downstream changes
 }
 ```
+
+It implements `BatchVectorizer`, so library code featurising a whole corpus — cross-validation in
+particular — batches automatically without knowing the concrete type.
 
 Export a model once with Hugging Face Optimum:
 

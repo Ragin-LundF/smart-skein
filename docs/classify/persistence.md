@@ -88,6 +88,34 @@ the normalizer's identity. For an [ONNX embedding](../embeddings/onnx-local.md) 
 of the model file's **contents** — a model swapped in place under an unchanged name is exactly what
 this catches.
 
+## The vector canary
+
+A fingerprint covers what a vectorizer can *declare about itself*, which is everything when the
+output is a pure function of the configuration. It is not everything for an
+[embedding service](../embeddings/external-service.md): the model can be changed on the server
+under an unchanged name, and nothing in the protocol reveals it. The fingerprint still matches.
+
+So a model can also carry a handful of fixed probe texts and the vectors they produced at training
+time. `loadMultiLabel` re-embeds them and throws `VectorizerCanaryException` if they have moved
+beyond `VectorizerCanary.tolerance`.
+
+```kotlin
+// Opt in on the vectorizer; saveMultiLabel captures the references, loadMultiLabel checks them.
+EmbeddingServiceConfig(/* ... */, canaryProbes = EmbeddingProbes.DEFAULT)
+
+// Skip the check when the service may be unreachable and you accept the risk:
+ModelStore.loadMultiLabel(path = path, vectorizer = vectorizer, verifyCanary = false)
+```
+
+Drift is measured as relative L2, not cosine distance, so a service that starts L2-normalising its
+output is caught rather than waved through. `saveMultiLabel` re-checks the canary before writing,
+which catches a model swapped during a long training run. A model saved without probes behaves
+exactly as it did before. See [ADR 0002](../adr/0002-vector-canary.md).
+
+**The canary does not change the payload version.** It is four optional fields appended to the
+existing `0x03` shape, the same way `IdfVectorizer`'s document-frequency table is carried. A `0x04`
+would make readers reject files they can read perfectly.
+
 ## How big the file is
 
 Size obeys one formula, and the corpus is not in it:
@@ -96,7 +124,7 @@ Size obeys one formula, and the corpus is not in it:
 bytes ≈ features × labels × keepFraction × bytesPerWeight
 ```
 
-Measured on a 237-label, 102,205-feature model at 8% density: **89.7% of the file is the weight
+Measured on a ~240-label, ~100,000-feature model at 8% density: **89.7% of the file is the weight
 matrix.** Every vocabulary string together would be 5.6%, which is why stopword removal cannot be
 the reason a model is large.
 
@@ -135,3 +163,7 @@ Masking cut features by 59% and the model by 60%. See [Scale](scale.md).
 
 A `.skein` file contains the hashing key and the feature vectors. The features are irreversible, but
 the key is the secret that makes them so — **treat the file as a secret**.
+
+If you enable a canary, the file also holds its probe texts **in clear**. They are the one thing in
+a `.skein` that is not a hash. That is safe because you choose them — use short synthetic sentences
+written for the purpose, never records from your corpus.

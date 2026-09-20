@@ -60,8 +60,10 @@ Rules:
                  skein-text  (foundation, no dependencies)
                   ╱        ╲
         skein-classify    skein-extract
-          ╱        ╲
-skein-store-postgres  skein-classify-embedding-onnx
+        ╱      │      ╲
+skein-store-   │   skein-classify-embedding-onnx
+   postgres    │
+               skein-classify-embedding-http
 ```
 
 | Module | Published | Responsibility |
@@ -70,7 +72,8 @@ skein-store-postgres  skein-classify-embedding-onnx
 | `skein-classify` | yes | Assigning labels to a whole record — one label, or several when labels co-occur: schema definition and validation, privacy-preserving feature hashing, the learning algorithms, model persistence, active-learning support, calibration, explanation and quality evaluation. Single-label scoring is the `Classifier` port; co-occurring labels are `MultiLabelClassifier` with `BatchLearner`, and the two are siblings rather than alternatives. See `docs/adr/0001-multi-label-classification.md`. |
 | `skein-extract` | yes | Pulling structured values *out* of text: typed-token patterns, slot filling, layout clustering, and a trainable token tagger with its own model format. Unlike classification, it returns real values rather than hashes. |
 | `skein-store-postgres` | yes | An optional storage adapter implementing the classification module's storage port against PostgreSQL, with encryption at rest. Contains no learning logic. |
-| `skein-classify-embedding-onnx` | yes | An optional adapter implementing the classification module's `Vectorizer` port with an external ONNX sentence-embedding model, so a classifier can generalise past literal wording. Contains no learning logic. Exists as its own module so that the ONNX Runtime and tokenizer native binaries stay out of every consumer that uses feature hashing. |
+| `skein-classify-embedding-onnx` | yes | An optional adapter implementing the classification module's `Vectorizer` and `BatchVectorizer` ports with an external ONNX sentence-embedding model, so a classifier can generalise past literal wording. Contains no learning logic. Exists as its own module so that the ONNX Runtime and tokenizer native binaries stay out of every consumer that uses feature hashing. |
+| `skein-classify-embedding-http` | yes | An optional adapter implementing the classification module's `Vectorizer` and `BatchVectorizer` ports against an OpenAI-compatible `/embeddings` service. Contains no learning logic. Owns the *protocol* only: the HTTP call itself is behind an `EmbeddingTransport` port, so retries, proxies and pooling stay the caller's. Exists as its own module so that a JSON parser stays out of every consumer that uses feature hashing. Its identity guarantee is weaker than the ONNX adapter's — see `docs/adr/0002-vector-canary.md`. |
 | `skein-cli` | yes | Command-line tools over the library: interactive labeling, batch prediction, model inspection and evaluation. Holds only CLI concerns — argument parsing, CSV I/O, terminal interaction — and no algorithm that belongs in a library module. |
 | `skein-bom` | yes | Version alignment for consumers. Contains no code. |
 | `examples` | no | Runnable demonstrations, one per capability. Not published, and nothing else may depend on it. |
@@ -98,6 +101,10 @@ boundary must respect that.
   fragments of the training text. Anything persisting that data must expose the trade-off explicitly
   and default to the safer option.
 - Fields marked as sensitive must not reach feature extraction.
+- A `VectorizerCanary`'s probe texts are stored in a `.skein` file **in clear**, and are the one
+  exception to "a model file contains no readable text". They are safe only because the caller
+  chooses them: the API, the KDoc and every page documenting the feature must say that probes are
+  short synthetic sentences and never records from the corpus.
 - When a change weakens a documented privacy property, update the documentation in the same change.
   Never leave a claim in place that the code no longer supports.
 
@@ -107,6 +114,8 @@ Before adding one, check whether the responsibility belongs in an existing modul
 justified when it introduces an optional dependency that library users should be able to avoid, or
 an independently versioned deliverable.
 
-A new module must: use the four-package layout, declare its own coverage and static-analysis gates
-through the shared convention plugins, carry a README describing its responsibility, and be added to
-the BOM if it is published.
+A new module must: use the four-package layout (a layer with nothing stateful in it stays empty
+rather than gaining a class for symmetry), declare its own coverage and static-analysis gates
+through the shared convention plugins, carry a README describing its responsibility, and — if it is
+published — be added to the BOM, apply `skein.api-conventions`, and commit an ABI dump produced by
+`./gradlew updateKotlinAbi`.

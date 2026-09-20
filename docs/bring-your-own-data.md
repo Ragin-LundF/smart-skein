@@ -186,7 +186,7 @@ training run**. Two things make that workable, and both are built in: `vectorize
 batch in one pass, and an `EmbeddingCache` means a hyperparameter sweep pays for each distinct
 record once. Deduplicate first (below) and the cache is far smaller than the corpus.
 
-The classifier itself gets *smaller*: 384 dimensions x 237 labels x 4 bytes is 364 KB against 17 MB
+The classifier itself gets *smaller*: 384 dimensions x ~240 labels x 4 bytes is ~370 KB against 17 MB
 for a sparse n-gram model, and pruning stops being worth doing. The artifact that matters becomes
 the embedding model, at 20–400 MB.
 
@@ -210,7 +210,7 @@ Four things matter above a few hundred thousand records, in this order:
    and a 60% smaller model**, for one tokenisation pass.
 2. **Deduplicate** with `CorpusDeduplicator`, on masked text *and* label set. Once the references are
    masked away, a large share of a real export is literally the same record — measured 400,000
-   documents collapsing to 21,420. Report the ratio on your own data rather than assuming that one
+   documents collapsing to ~21,000. Report the ratio on your own data rather than assuming that one
    transfers.
 3. **Prune**, via `LbfgsMultiLabelLearner`'s `keepFraction`. L2 shrinks weights towards zero but
    never to it, so a fitted matrix is dense and mostly noise. Choose the fraction from a measured

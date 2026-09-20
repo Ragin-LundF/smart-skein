@@ -2,7 +2,6 @@ package io.skein.examples.embedding
 
 import io.skein.classify.application.HashingVectorizer
 import io.skein.classify.application.MultiLabelEvaluator
-import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.HashingConfig
 import io.skein.classify.domain.Label
 import io.skein.classify.domain.MultiLabelMetrics
@@ -11,6 +10,7 @@ import io.skein.classify.domain.MultiLabelOutcome
 import io.skein.classify.domain.MultiLabeledFeatures
 import io.skein.classify.infrastructure.LbfgsMultiLabelLearner
 import io.skein.classify.spi.Vectorizer
+import io.skein.classify.spi.vectorizeAll
 import io.skein.examples.recipes.Recipe
 import io.skein.examples.recipes.RecipeCorpus
 import io.skein.examples.recipes.RecipeRuleset
@@ -32,15 +32,11 @@ private const val HASHING_FEATURES = 1 shl 15
 object EmbeddingComparison {
 
     /** Scores [vectorizer] on the hand-written held-out set after training on the generated corpus. */
-    fun evaluate(
-        vectorizer: Vectorizer,
-        batched: ((List<String>) -> List<FeatureVector>)? = null,
-    ): MultiLabelMetrics {
+    fun evaluate(vectorizer: Vectorizer): MultiLabelMetrics {
         val ruleset = RecipeRuleset.load()
         val training = RecipeCorpus.training()
         val trainingTexts = training.map { recipe -> recipe.featureText() }
-        val trainingVectors = batched?.invoke(trainingTexts)
-            ?: trainingTexts.map { text -> vectorizer.vectorize(text = text) }
+        val trainingVectors = vectorizer.vectorizeAll(texts = trainingTexts)
 
         val model = LbfgsMultiLabelLearner(
             featureCount = vectorizer.dimension(),
@@ -58,7 +54,7 @@ object EmbeddingComparison {
 
         val handWritten = RecipeCorpus.handWritten()
         val handTexts = handWritten.map { (recipe, _) -> recipe.featureText() }
-        val handVectors = batched?.invoke(handTexts) ?: handTexts.map { text -> vectorizer.vectorize(text = text) }
+        val handVectors = vectorizer.vectorizeAll(texts = handTexts)
 
         return MultiLabelMetricsFactory.from(
             outcomes = handWritten.indices.map { index ->

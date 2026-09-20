@@ -32,3 +32,8 @@ ragin_*.pgp
 *.skein
 skein-demo
 localSettings.gradle.kts
+
+# skein-demo's RuleTrainerTest writes a timestamped CSV of internal training rows into the repo
+# root. The module itself is ignored above; its output was not, which left real records one
+# `git add -A` away from a public repository.
+training_data_*.csv

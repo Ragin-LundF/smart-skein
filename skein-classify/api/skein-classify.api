@@ -1,0 +1,1313 @@
+public final class io/skein/classify/application/ActiveLearningSelector {
+	public fun <init> (Lio/skein/classify/application/ClassificationService;)V
+	public final fun selectForReview (Ljava/util/List;ILio/skein/classify/domain/UncertaintyStrategyEnum;)Ljava/util/List;
+	public static synthetic fun selectForReview$default (Lio/skein/classify/application/ActiveLearningSelector;Ljava/util/List;ILio/skein/classify/domain/UncertaintyStrategyEnum;ILjava/lang/Object;)Ljava/util/List;
+}
+
+public final class io/skein/classify/application/ClassificationService {
+	public fun <init> (Lio/skein/classify/domain/Schema;Lio/skein/classify/domain/PrivacyModeEnum;Lio/skein/classify/domain/HashingConfig;Lio/skein/classify/spi/Classifier;Lio/skein/classify/spi/FeatureStore;Lio/skein/classify/application/RecordMapper;)V
+	public synthetic fun <init> (Lio/skein/classify/domain/Schema;Lio/skein/classify/domain/PrivacyModeEnum;Lio/skein/classify/domain/HashingConfig;Lio/skein/classify/spi/Classifier;Lio/skein/classify/spi/FeatureStore;Lio/skein/classify/application/RecordMapper;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun classify-8frB1V0 (Ljava/util/Map;)Lio/skein/classify/domain/Prediction;
+	public final fun classifyOrNull-WcqbbIk (Ljava/util/Map;D)Lio/skein/classify/domain/Prediction;
+	public final fun explain-zxekuog (Ljava/util/Map;ILio/skein/classify/domain/AttributionModeEnum;)Lio/skein/classify/domain/Explanation;
+	public static synthetic fun explain-zxekuog$default (Lio/skein/classify/application/ClassificationService;Ljava/util/Map;ILio/skein/classify/domain/AttributionModeEnum;ILjava/lang/Object;)Lio/skein/classify/domain/Explanation;
+	public final fun feedback-PzS0UmU (Ljava/util/Map;Ljava/lang/String;)V
+	public final fun fitCalibration (Ljava/util/List;)Lio/skein/classify/domain/Calibration;
+	public final fun forget ()V
+	public final fun getCalibration ()Lio/skein/classify/domain/Calibration;
+	public final fun getClassifier ()Lio/skein/classify/spi/Classifier;
+	public final fun getFeatureStore ()Lio/skein/classify/spi/FeatureStore;
+	public final fun getPrivacyMode ()Lio/skein/classify/domain/PrivacyModeEnum;
+	public final fun getSchema ()Lio/skein/classify/domain/Schema;
+	public final fun learn-8frB1V0 (Ljava/util/Map;)V
+	public final fun learnAll (Ljava/lang/Iterable;)V
+	public final fun metrics ()Lio/skein/classify/domain/ClassificationMetrics;
+	public final fun retrain (ILjava/lang/Long;)V
+	public static synthetic fun retrain$default (Lio/skein/classify/application/ClassificationService;ILjava/lang/Long;ILjava/lang/Object;)V
+	public final fun setCalibration (Lio/skein/classify/domain/Calibration;)V
+}
+
+public final class io/skein/classify/application/ClassifierFactory {
+	public static final field INSTANCE Lio/skein/classify/application/ClassifierFactory;
+	public final fun create (Lio/skein/classify/application/ClassifierKindEnum;)Lio/skein/classify/spi/Classifier;
+	public final fun create (Lio/skein/classify/application/ClassifierKindEnum;Lio/skein/classify/domain/ClassifierHyperparameters;)Lio/skein/classify/spi/Classifier;
+}
+
+public final class io/skein/classify/application/ClassifierKindEnum : java/lang/Enum {
+	public static final field LOGISTIC_REGRESSION Lio/skein/classify/application/ClassifierKindEnum;
+	public static final field MULTI_LABEL_LOGISTIC Lio/skein/classify/application/ClassifierKindEnum;
+	public static final field NAIVE_BAYES Lio/skein/classify/application/ClassifierKindEnum;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/skein/classify/application/ClassifierKindEnum;
+	public static fun values ()[Lio/skein/classify/application/ClassifierKindEnum;
+}
+
+public final class io/skein/classify/application/CorpusDeduplicator {
+	public fun <init> ()V
+	public fun <init> (Lio/skein/classify/application/TokenMasker;)V
+	public synthetic fun <init> (Lio/skein/classify/application/TokenMasker;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun deduplicate (Ljava/util/List;)Lio/skein/classify/application/DeduplicationResult;
+}
+
+public final class io/skein/classify/application/DeduplicationResult {
+	public fun <init> (Ljava/util/List;Ljava/util/List;I)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()I
+	public final fun copy (Ljava/util/List;Ljava/util/List;I)Lio/skein/classify/application/DeduplicationResult;
+	public static synthetic fun copy$default (Lio/skein/classify/application/DeduplicationResult;Ljava/util/List;Ljava/util/List;IILjava/lang/Object;)Lio/skein/classify/application/DeduplicationResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOccurrences ()Ljava/util/List;
+	public final fun getOriginalSize ()I
+	public final fun getRows ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun ratio ()D
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/application/EvaluationReportFormatter {
+	public static final field INSTANCE Lio/skein/classify/application/EvaluationReportFormatter;
+	public final fun toText (Lio/skein/classify/domain/CrossValidationReport;Ljava/lang/String;)Ljava/lang/String;
+	public final fun toText (Lio/skein/classify/domain/EvaluationReport;Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class io/skein/classify/application/GroupedSplitter {
+	public fun <init> ()V
+	public fun <init> (J)V
+	public synthetic fun <init> (JILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun assign (Ljava/util/List;I)[I
+	public final fun folds (Ljava/util/List;I)Ljava/util/List;
+}
+
+public final class io/skein/classify/application/HashingVectorizer : io/skein/classify/spi/Vectorizer {
+	public static final field BOUNDS_HEADROOM I
+	public static final field DEFAULT_BOUNDS_BUFFER_SIZE I
+	public static final field DEFAULT_ENCODE_BUFFER_BYTES I
+	public static final field KIND Ljava/lang/String;
+	public static final field MAX_POOLED_BOUNDS_SIZE I
+	public static final field MAX_POOLED_ENCODE_BYTES I
+	public static final field MAX_UTF8_BYTES_PER_CHAR I
+	public fun <init> (Lio/skein/classify/domain/HashingConfig;Lio/skein/text/spi/TextNormalizer;)V
+	public synthetic fun <init> (Lio/skein/classify/domain/HashingConfig;Lio/skein/text/spi/TextNormalizer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun dimension ()I
+	public fun fingerprint ()Lio/skein/classify/domain/VectorizerFingerprint;
+	public final fun ngramsByBucket (Ljava/lang/String;)Ljava/util/Map;
+	public fun vectorize (Ljava/lang/String;)Lio/skein/classify/domain/FeatureVector;
+}
+
+public final class io/skein/classify/application/IdfVectorizer : io/skein/classify/spi/Vectorizer {
+	public static final field Companion Lio/skein/classify/application/IdfVectorizer$Companion;
+	public fun <init> (Lio/skein/classify/spi/Vectorizer;Lio/skein/classify/domain/DocumentFrequencyTable;)V
+	public fun dimension ()I
+	public fun fingerprint ()Lio/skein/classify/domain/VectorizerFingerprint;
+	public final fun table ()Lio/skein/classify/domain/DocumentFrequencyTable;
+	public fun vectorize (Ljava/lang/String;)Lio/skein/classify/domain/FeatureVector;
+}
+
+public final class io/skein/classify/application/IdfVectorizer$Companion {
+	public final fun fit (Lio/skein/classify/spi/Vectorizer;Ljava/util/List;I)Lio/skein/classify/application/IdfVectorizer;
+	public static synthetic fun fit$default (Lio/skein/classify/application/IdfVectorizer$Companion;Lio/skein/classify/spi/Vectorizer;Ljava/util/List;IILjava/lang/Object;)Lio/skein/classify/application/IdfVectorizer;
+}
+
+public final class io/skein/classify/application/LoadedModel {
+	public fun <init> (Lio/skein/classify/domain/Schema;Lio/skein/classify/application/ClassifierKindEnum;Lio/skein/classify/domain/HashingConfig;Ljava/util/List;Lio/skein/classify/domain/Calibration;Lio/skein/classify/domain/ClassifierHyperparameters;)V
+	public synthetic fun <init> (Lio/skein/classify/domain/Schema;Lio/skein/classify/application/ClassifierKindEnum;Lio/skein/classify/domain/HashingConfig;Ljava/util/List;Lio/skein/classify/domain/Calibration;Lio/skein/classify/domain/ClassifierHyperparameters;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/skein/classify/domain/Schema;
+	public final fun component2 ()Lio/skein/classify/application/ClassifierKindEnum;
+	public final fun component3 ()Lio/skein/classify/domain/HashingConfig;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Lio/skein/classify/domain/Calibration;
+	public final fun component6 ()Lio/skein/classify/domain/ClassifierHyperparameters;
+	public final fun copy (Lio/skein/classify/domain/Schema;Lio/skein/classify/application/ClassifierKindEnum;Lio/skein/classify/domain/HashingConfig;Ljava/util/List;Lio/skein/classify/domain/Calibration;Lio/skein/classify/domain/ClassifierHyperparameters;)Lio/skein/classify/application/LoadedModel;
+	public static synthetic fun copy$default (Lio/skein/classify/application/LoadedModel;Lio/skein/classify/domain/Schema;Lio/skein/classify/application/ClassifierKindEnum;Lio/skein/classify/domain/HashingConfig;Ljava/util/List;Lio/skein/classify/domain/Calibration;Lio/skein/classify/domain/ClassifierHyperparameters;ILjava/lang/Object;)Lio/skein/classify/application/LoadedModel;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCalibration ()Lio/skein/classify/domain/Calibration;
+	public final fun getClassifier ()Lio/skein/classify/application/ClassifierKindEnum;
+	public final fun getHashingConfig ()Lio/skein/classify/domain/HashingConfig;
+	public final fun getHyperparameters ()Lio/skein/classify/domain/ClassifierHyperparameters;
+	public final fun getObservations ()Ljava/util/List;
+	public final fun getSchema ()Lio/skein/classify/domain/Schema;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/application/LoadedMultiLabelModel {
+	public fun <init> (Lio/skein/classify/domain/Schema;Lio/skein/classify/infrastructure/MultiLabelLogisticClassifier;Lio/skein/classify/domain/VectorizerFingerprint;Lio/skein/classify/domain/LabelThresholds;Lio/skein/classify/domain/HashingConfig;Lio/skein/classify/domain/VectorizerCanary;)V
+	public synthetic fun <init> (Lio/skein/classify/domain/Schema;Lio/skein/classify/infrastructure/MultiLabelLogisticClassifier;Lio/skein/classify/domain/VectorizerFingerprint;Lio/skein/classify/domain/LabelThresholds;Lio/skein/classify/domain/HashingConfig;Lio/skein/classify/domain/VectorizerCanary;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/skein/classify/domain/Schema;
+	public final fun component2 ()Lio/skein/classify/infrastructure/MultiLabelLogisticClassifier;
+	public final fun component3 ()Lio/skein/classify/domain/VectorizerFingerprint;
+	public final fun component4 ()Lio/skein/classify/domain/LabelThresholds;
+	public final fun component5 ()Lio/skein/classify/domain/HashingConfig;
+	public final fun component6 ()Lio/skein/classify/domain/VectorizerCanary;
+	public final fun copy (Lio/skein/classify/domain/Schema;Lio/skein/classify/infrastructure/MultiLabelLogisticClassifier;Lio/skein/classify/domain/VectorizerFingerprint;Lio/skein/classify/domain/LabelThresholds;Lio/skein/classify/domain/HashingConfig;Lio/skein/classify/domain/VectorizerCanary;)Lio/skein/classify/application/LoadedMultiLabelModel;
+	public static synthetic fun copy$default (Lio/skein/classify/application/LoadedMultiLabelModel;Lio/skein/classify/domain/Schema;Lio/skein/classify/infrastructure/MultiLabelLogisticClassifier;Lio/skein/classify/domain/VectorizerFingerprint;Lio/skein/classify/domain/LabelThresholds;Lio/skein/classify/domain/HashingConfig;Lio/skein/classify/domain/VectorizerCanary;ILjava/lang/Object;)Lio/skein/classify/application/LoadedMultiLabelModel;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCanary ()Lio/skein/classify/domain/VectorizerCanary;
+	public final fun getClassifier ()Lio/skein/classify/infrastructure/MultiLabelLogisticClassifier;
+	public final fun getFingerprint ()Lio/skein/classify/domain/VectorizerFingerprint;
+	public final fun getHashingConfig ()Lio/skein/classify/domain/HashingConfig;
+	public final fun getSchema ()Lio/skein/classify/domain/Schema;
+	public final fun getThresholds ()Lio/skein/classify/domain/LabelThresholds;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/application/ModelEvaluator {
+	public fun <init> ()V
+	public fun <init> (IILio/skein/classify/application/StratifiedSplitter;)V
+	public synthetic fun <init> (IILio/skein/classify/application/StratifiedSplitter;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun crossValidate (Ljava/util/List;Lkotlin/jvm/functions/Function0;II)Lio/skein/classify/domain/CrossValidationReport;
+	public static synthetic fun crossValidate$default (Lio/skein/classify/application/ModelEvaluator;Ljava/util/List;Lkotlin/jvm/functions/Function0;IIILjava/lang/Object;)Lio/skein/classify/domain/CrossValidationReport;
+	public final fun evaluate (Lio/skein/classify/spi/Classifier;Ljava/util/List;)Lio/skein/classify/domain/EvaluationReport;
+	public final fun evaluateRecords (Lio/skein/classify/application/ClassificationService;Ljava/util/List;)Lio/skein/classify/domain/EvaluationReport;
+	public final fun holdout (Ljava/util/List;Lkotlin/jvm/functions/Function0;DI)Lio/skein/classify/domain/EvaluationReport;
+	public static synthetic fun holdout$default (Lio/skein/classify/application/ModelEvaluator;Ljava/util/List;Lkotlin/jvm/functions/Function0;DIILjava/lang/Object;)Lio/skein/classify/domain/EvaluationReport;
+}
+
+public final class io/skein/classify/application/ModelStore {
+	public static final field INSTANCE Lio/skein/classify/application/ModelStore;
+	public final fun load (Ljava/nio/file/Path;)Lio/skein/classify/application/LoadedModel;
+	public final fun loadMultiLabel (Ljava/nio/file/Path;Lio/skein/classify/spi/Vectorizer;Z)Lio/skein/classify/application/LoadedMultiLabelModel;
+	public final fun loadMultiLabel (Ljava/nio/file/Path;Lkotlin/jvm/functions/Function1;Z)Lio/skein/classify/application/LoadedMultiLabelModel;
+	public static synthetic fun loadMultiLabel$default (Lio/skein/classify/application/ModelStore;Ljava/nio/file/Path;Lio/skein/classify/spi/Vectorizer;ZILjava/lang/Object;)Lio/skein/classify/application/LoadedMultiLabelModel;
+	public static synthetic fun loadMultiLabel$default (Lio/skein/classify/application/ModelStore;Ljava/nio/file/Path;Lkotlin/jvm/functions/Function1;ZILjava/lang/Object;)Lio/skein/classify/application/LoadedMultiLabelModel;
+	public final fun save (Ljava/nio/file/Path;Lio/skein/classify/domain/Schema;Lio/skein/classify/application/ClassifierKindEnum;Lio/skein/classify/domain/HashingConfig;Ljava/util/List;)V
+	public final fun save (Ljava/nio/file/Path;Lio/skein/classify/domain/Schema;Lio/skein/classify/application/ClassifierKindEnum;Lio/skein/classify/domain/HashingConfig;Ljava/util/List;Lio/skein/classify/domain/Calibration;Lio/skein/classify/domain/ClassifierHyperparameters;)V
+	public static synthetic fun save$default (Lio/skein/classify/application/ModelStore;Ljava/nio/file/Path;Lio/skein/classify/domain/Schema;Lio/skein/classify/application/ClassifierKindEnum;Lio/skein/classify/domain/HashingConfig;Ljava/util/List;Lio/skein/classify/domain/Calibration;Lio/skein/classify/domain/ClassifierHyperparameters;ILjava/lang/Object;)V
+	public final fun saveMultiLabel (Ljava/nio/file/Path;Lio/skein/classify/domain/Schema;Lio/skein/classify/infrastructure/MultiLabelLogisticClassifier;Lio/skein/classify/spi/Vectorizer;Lio/skein/classify/domain/LabelThresholds;Lio/skein/classify/domain/HashingConfig;)V
+	public static synthetic fun saveMultiLabel$default (Lio/skein/classify/application/ModelStore;Ljava/nio/file/Path;Lio/skein/classify/domain/Schema;Lio/skein/classify/infrastructure/MultiLabelLogisticClassifier;Lio/skein/classify/spi/Vectorizer;Lio/skein/classify/domain/LabelThresholds;Lio/skein/classify/domain/HashingConfig;ILjava/lang/Object;)V
+}
+
+public final class io/skein/classify/application/MultiLabelCrossValidator {
+	public fun <init> ()V
+	public fun <init> (Lio/skein/classify/application/GroupedSplitter;Lio/skein/classify/application/MultiLabelEvaluator;)V
+	public synthetic fun <init> (Lio/skein/classify/application/GroupedSplitter;Lio/skein/classify/application/MultiLabelEvaluator;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun crossValidate (Ljava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;ID)Lio/skein/classify/domain/MultiLabelCrossValidationReport;
+	public static synthetic fun crossValidate$default (Lio/skein/classify/application/MultiLabelCrossValidator;Ljava/util/List;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;IDILjava/lang/Object;)Lio/skein/classify/domain/MultiLabelCrossValidationReport;
+}
+
+public final class io/skein/classify/application/MultiLabelEvaluator {
+	public fun <init> ()V
+	public final fun evaluate (Lio/skein/classify/spi/MultiLabelClassifier;Ljava/util/List;D)Lio/skein/classify/domain/MultiLabelMetrics;
+	public final fun outcomes (Lio/skein/classify/spi/MultiLabelClassifier;Ljava/util/List;D)Ljava/util/List;
+	public final fun recallAtK (Ljava/util/List;Ljava/util/List;)Ljava/util/Map;
+	public static synthetic fun recallAtK$default (Lio/skein/classify/application/MultiLabelEvaluator;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Ljava/util/Map;
+	public final fun sweep (Ljava/util/List;Ljava/util/List;)Ljava/util/List;
+	public static synthetic fun sweep$default (Lio/skein/classify/application/MultiLabelEvaluator;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Ljava/util/List;
+}
+
+public final class io/skein/classify/application/RecordImportService {
+	public fun <init> (Lio/skein/classify/domain/Schema;Lio/skein/classify/application/SchemaValidator;Lio/skein/classify/application/RecordMapper;)V
+	public synthetic fun <init> (Lio/skein/classify/domain/Schema;Lio/skein/classify/application/SchemaValidator;Lio/skein/classify/application/RecordMapper;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun importFrom (Lio/skein/classify/spi/RecordSource;)Lio/skein/classify/domain/ImportResult;
+}
+
+public final class io/skein/classify/application/RecordMapper {
+	public fun <init> (Lio/skein/classify/domain/Schema;)V
+	public final fun map-8frB1V0 (Ljava/util/Map;)Lio/skein/classify/domain/MappedRecord;
+}
+
+public final class io/skein/classify/application/SchemaInference {
+	public static final field Companion Lio/skein/classify/application/SchemaInference$Companion;
+	public static final field DEFAULT_MAX_CATEGORICAL_CARDINALITY I
+	public fun <init> ()V
+	public fun <init> (I)V
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun infer (Ljava/util/List;Ljava/lang/String;)Lio/skein/classify/domain/Schema;
+}
+
+public final class io/skein/classify/application/SchemaInference$Companion {
+}
+
+public final class io/skein/classify/application/SchemaValidator {
+	public fun <init> (Lio/skein/classify/domain/Schema;)V
+	public final fun validate-8frB1V0 (Ljava/util/Map;)Lio/skein/classify/domain/ValidationResult;
+}
+
+public final class io/skein/classify/application/StratifiedSplitter {
+	public fun <init> ()V
+	public fun <init> (J)V
+	public synthetic fun <init> (JILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun folds (Ljava/util/List;I)Ljava/util/List;
+	public final fun holdout (Ljava/util/List;D)Lio/skein/classify/domain/DatasetSplit;
+	public static synthetic fun holdout$default (Lio/skein/classify/application/StratifiedSplitter;Ljava/util/List;DILjava/lang/Object;)Lio/skein/classify/domain/DatasetSplit;
+}
+
+public final class io/skein/classify/application/TemperatureCalibrator {
+	public fun <init> ()V
+	public final fun fit (Ljava/util/List;)Lio/skein/classify/domain/Calibration;
+	public final fun fit (Ljava/util/List;Lio/skein/classify/spi/Classifier;)Lio/skein/classify/domain/Calibration;
+}
+
+public final class io/skein/classify/application/ThresholdOptimizer {
+	public fun <init> ()V
+	public fun <init> (D)V
+	public synthetic fun <init> (DILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun fit (Ljava/util/List;)Lio/skein/classify/domain/LabelThresholds;
+}
+
+public final class io/skein/classify/application/TokenMasker {
+	public fun <init> ()V
+	public fun <init> (Lio/skein/text/application/TypedTokenizer;II)V
+	public synthetic fun <init> (Lio/skein/text/application/TypedTokenizer;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun mask (Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class io/skein/classify/application/VectorizerCanaryException : java/lang/IllegalStateException {
+	public fun <init> (Lio/skein/classify/domain/VectorizerCanary;Ljava/lang/String;D)V
+	public final fun getCanary ()Lio/skein/classify/domain/VectorizerCanary;
+	public final fun getDrift ()D
+	public final fun getProbe ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/application/VectorizerMismatchException : java/lang/IllegalStateException {
+	public fun <init> (Lio/skein/classify/domain/VectorizerFingerprint;Lio/skein/classify/domain/VectorizerFingerprint;)V
+	public final fun getActual ()Lio/skein/classify/domain/VectorizerFingerprint;
+	public final fun getExpected ()Lio/skein/classify/domain/VectorizerFingerprint;
+}
+
+public final class io/skein/classify/domain/AttributionModeEnum : java/lang/Enum {
+	public static final field BUCKETS_ONLY Lio/skein/classify/domain/AttributionModeEnum;
+	public static final field WITH_NGRAMS Lio/skein/classify/domain/AttributionModeEnum;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/skein/classify/domain/AttributionModeEnum;
+	public static fun values ()[Lio/skein/classify/domain/AttributionModeEnum;
+}
+
+public final class io/skein/classify/domain/AveragedMetrics {
+	public fun <init> (DDD)V
+	public final fun component1 ()D
+	public final fun component2 ()D
+	public final fun component3 ()D
+	public final fun copy (DDD)Lio/skein/classify/domain/AveragedMetrics;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/AveragedMetrics;DDDILjava/lang/Object;)Lio/skein/classify/domain/AveragedMetrics;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getF1 ()D
+	public final fun getPrecision ()D
+	public final fun getRecall ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/Calibration {
+	public static final field Companion Lio/skein/classify/domain/Calibration$Companion;
+	public fun <init> (D)V
+	public final fun component1 ()D
+	public final fun copy (D)Lio/skein/classify/domain/Calibration;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/Calibration;DILjava/lang/Object;)Lio/skein/classify/domain/Calibration;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getTemperature ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/Calibration$Companion {
+	public final fun getNONE ()Lio/skein/classify/domain/Calibration;
+}
+
+public final class io/skein/classify/domain/CalibrationBin {
+	public fun <init> (DDIDD)V
+	public final fun component1 ()D
+	public final fun component2 ()D
+	public final fun component3 ()I
+	public final fun component4 ()D
+	public final fun component5 ()D
+	public final fun copy (DDIDD)Lio/skein/classify/domain/CalibrationBin;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/CalibrationBin;DDIDDILjava/lang/Object;)Lio/skein/classify/domain/CalibrationBin;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAccuracy ()D
+	public final fun getCount ()I
+	public final fun getLowerBound ()D
+	public final fun getMeanConfidence ()D
+	public final fun getUpperBound ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/CalibrationSample {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Map;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-tUGlzls ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun copy--LtgrXA (Ljava/lang/String;Ljava/util/Map;)Lio/skein/classify/domain/CalibrationSample;
+	public static synthetic fun copy--LtgrXA$default (Lio/skein/classify/domain/CalibrationSample;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Lio/skein/classify/domain/CalibrationSample;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLogScores ()Ljava/util/Map;
+	public final fun getTrueLabel-tUGlzls ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/CategoricalField : io/skein/classify/domain/FieldSpec {
+	public fun <init> (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)V
+	public synthetic fun <init> (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lio/skein/classify/domain/SensitivityEnum;
+	public final fun copy (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)Lio/skein/classify/domain/CategoricalField;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/CategoricalField;Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILjava/lang/Object;)Lio/skein/classify/domain/CategoricalField;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getName ()Ljava/lang/String;
+	public fun getSensitivity ()Lio/skein/classify/domain/SensitivityEnum;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/ClassificationMetrics {
+	public fun <init> (ILjava/util/Map;)V
+	public final fun component1 ()I
+	public final fun component2 ()Ljava/util/Map;
+	public final fun copy (ILjava/util/Map;)Lio/skein/classify/domain/ClassificationMetrics;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/ClassificationMetrics;ILjava/util/Map;ILjava/lang/Object;)Lio/skein/classify/domain/ClassificationMetrics;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPerLabelCounts ()Ljava/util/Map;
+	public final fun getTotalObservations ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/ClassifierHyperparameters {
+	public static final field Companion Lio/skein/classify/domain/ClassifierHyperparameters$Companion;
+	public static final field DEFAULT_DECAY_RATE D
+	public static final field DEFAULT_L2_REGULARIZATION D
+	public static final field DEFAULT_LEARNING_RATE D
+	public static final field DEFAULT_SMOOTHING_ALPHA D
+	public fun <init> ()V
+	public fun <init> (DDDD)V
+	public synthetic fun <init> (DDDDILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()D
+	public final fun component2 ()D
+	public final fun component3 ()D
+	public final fun component4 ()D
+	public final fun copy (DDDD)Lio/skein/classify/domain/ClassifierHyperparameters;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/ClassifierHyperparameters;DDDDILjava/lang/Object;)Lio/skein/classify/domain/ClassifierHyperparameters;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDecayRate ()D
+	public final fun getInitialLearningRate ()D
+	public final fun getL2Regularization ()D
+	public final fun getSmoothingAlpha ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/ClassifierHyperparameters$Companion {
+	public final fun getDEFAULTS ()Lio/skein/classify/domain/ClassifierHyperparameters;
+}
+
+public final class io/skein/classify/domain/ConfusionMatrix {
+	public static final field Companion Lio/skein/classify/domain/ConfusionMatrix$Companion;
+	public synthetic fun <init> (Ljava/util/List;[ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun columnTotal-QmvxT68 (Ljava/lang/String;)I
+	public final fun correct-QmvxT68 (Ljava/lang/String;)I
+	public final fun count-yBMQvBo (Ljava/lang/String;Ljava/lang/String;)I
+	public final fun getLabels ()Ljava/util/List;
+	public final fun rowTotal-QmvxT68 (Ljava/lang/String;)I
+	public final fun topConfusions (I)Ljava/util/List;
+	public final fun total ()I
+}
+
+public final class io/skein/classify/domain/ConfusionMatrix$Companion {
+	public final fun of (Ljava/util/List;)Lio/skein/classify/domain/ConfusionMatrix;
+}
+
+public final class io/skein/classify/domain/CrossValidationReport {
+	public fun <init> (Ljava/util/List;Lio/skein/classify/domain/EvaluationReport;)V
+	public final fun accuracyStandardDeviation ()D
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Lio/skein/classify/domain/EvaluationReport;
+	public final fun copy (Ljava/util/List;Lio/skein/classify/domain/EvaluationReport;)Lio/skein/classify/domain/CrossValidationReport;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/CrossValidationReport;Ljava/util/List;Lio/skein/classify/domain/EvaluationReport;ILjava/lang/Object;)Lio/skein/classify/domain/CrossValidationReport;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFolds ()Ljava/util/List;
+	public final fun getPooled ()Lio/skein/classify/domain/EvaluationReport;
+	public fun hashCode ()I
+	public final fun meanAccuracy ()D
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/DatasetSplit {
+	public fun <init> (Ljava/util/List;Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;)Lio/skein/classify/domain/DatasetSplit;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/DatasetSplit;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lio/skein/classify/domain/DatasetSplit;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHoldout ()Ljava/util/List;
+	public final fun getTraining ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/DocumentFrequencyTable {
+	public static final field Companion Lio/skein/classify/domain/DocumentFrequencyTable$Companion;
+	public fun <init> (I[II)V
+	public final fun digest ()Ljava/lang/String;
+	public final fun getDocumentCount ()I
+	public final fun getFrequencies ()[I
+	public final fun getMinimumDocumentFrequency ()I
+	public final fun idf (I)D
+	public final fun isKept (I)Z
+	public final fun keptBucketCount ()I
+}
+
+public final class io/skein/classify/domain/DocumentFrequencyTable$Companion {
+	public final fun floorFor (I)I
+}
+
+public final class io/skein/classify/domain/EvaluationReport {
+	public fun <init> (IDIDDDDLjava/util/List;Lio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/ConfusionMatrix;Ljava/util/List;)V
+	public final fun component1 ()I
+	public final fun component10 ()Lio/skein/classify/domain/AveragedMetrics;
+	public final fun component11 ()Lio/skein/classify/domain/AveragedMetrics;
+	public final fun component12 ()Lio/skein/classify/domain/ConfusionMatrix;
+	public final fun component13 ()Ljava/util/List;
+	public final fun component2 ()D
+	public final fun component3 ()I
+	public final fun component4 ()D
+	public final fun component5 ()D
+	public final fun component6 ()D
+	public final fun component7 ()D
+	public final fun component8 ()Ljava/util/List;
+	public final fun component9 ()Lio/skein/classify/domain/AveragedMetrics;
+	public final fun copy (IDIDDDDLjava/util/List;Lio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/ConfusionMatrix;Ljava/util/List;)Lio/skein/classify/domain/EvaluationReport;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/EvaluationReport;IDIDDDDLjava/util/List;Lio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/ConfusionMatrix;Ljava/util/List;ILjava/lang/Object;)Lio/skein/classify/domain/EvaluationReport;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAccuracy ()D
+	public final fun getBrierScore ()D
+	public final fun getCalibration ()Ljava/util/List;
+	public final fun getConfusionMatrix ()Lio/skein/classify/domain/ConfusionMatrix;
+	public final fun getExpectedCalibrationError ()D
+	public final fun getLogLoss ()D
+	public final fun getMacroAverage ()Lio/skein/classify/domain/AveragedMetrics;
+	public final fun getMicroAverage ()Lio/skein/classify/domain/AveragedMetrics;
+	public final fun getPerLabel ()Ljava/util/List;
+	public final fun getSampleCount ()I
+	public final fun getTopK ()I
+	public final fun getTopKAccuracy ()D
+	public final fun getWeightedAverage ()Lio/skein/classify/domain/AveragedMetrics;
+	public fun hashCode ()I
+	public final fun metricsFor-QmvxT68 (Ljava/lang/String;)Lio/skein/classify/domain/LabelMetrics;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/EvaluationReportFactory {
+	public static final field INSTANCE Lio/skein/classify/domain/EvaluationReportFactory;
+	public final fun from (Ljava/util/List;II)Lio/skein/classify/domain/EvaluationReport;
+	public static synthetic fun from$default (Lio/skein/classify/domain/EvaluationReportFactory;Ljava/util/List;IIILjava/lang/Object;)Lio/skein/classify/domain/EvaluationReport;
+}
+
+public final class io/skein/classify/domain/Explanation {
+	public synthetic fun <init> (Ljava/lang/String;DDDLjava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-tUGlzls ()Ljava/lang/String;
+	public final fun component2 ()D
+	public final fun component3 ()D
+	public final fun component4 ()D
+	public final fun component5 ()Ljava/util/List;
+	public final fun copy-P-xOs6Y (Ljava/lang/String;DDDLjava/util/List;)Lio/skein/classify/domain/Explanation;
+	public static synthetic fun copy-P-xOs6Y$default (Lio/skein/classify/domain/Explanation;Ljava/lang/String;DDDLjava/util/List;ILjava/lang/Object;)Lio/skein/classify/domain/Explanation;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBase ()D
+	public final fun getContributions ()Ljava/util/List;
+	public final fun getLabel-tUGlzls ()Ljava/lang/String;
+	public final fun getProbability ()D
+	public final fun getTotal ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/FeatureContribution {
+	public fun <init> (IFDLjava/lang/String;)V
+	public synthetic fun <init> (IFDLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()F
+	public final fun component3 ()D
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (IFDLjava/lang/String;)Lio/skein/classify/domain/FeatureContribution;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/FeatureContribution;IFDLjava/lang/String;ILjava/lang/Object;)Lio/skein/classify/domain/FeatureContribution;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContribution ()D
+	public final fun getFeatureIndex ()I
+	public final fun getFeatureValue ()F
+	public final fun getNgram ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/FeatureVector {
+	public fun <init> ([I[F)V
+	public final fun getIndices ()[I
+	public final fun getValues ()[F
+	public final fun nonZeroCount ()I
+}
+
+public abstract interface class io/skein/classify/domain/FieldSpec {
+	public abstract fun getName ()Ljava/lang/String;
+	public abstract fun getSensitivity ()Lio/skein/classify/domain/SensitivityEnum;
+}
+
+public final class io/skein/classify/domain/HashingConfig {
+	public static final field Companion Lio/skein/classify/domain/HashingConfig$Companion;
+	public static final field DEFAULT_CHAR_NGRAM_MAX I
+	public static final field DEFAULT_CHAR_NGRAM_MIN I
+	public static final field DEFAULT_NUM_FEATURES I
+	public static final field DEFAULT_WORD_NGRAM_MAX I
+	public static final field DEFAULT_WORD_NGRAM_MIN I
+	public fun <init> (JJIIIIILio/skein/classify/domain/TermWeightingEnum;)V
+	public synthetic fun <init> (JJIIIIILio/skein/classify/domain/TermWeightingEnum;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()J
+	public final fun component2 ()J
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun component5 ()I
+	public final fun component6 ()I
+	public final fun component7 ()I
+	public final fun component8 ()Lio/skein/classify/domain/TermWeightingEnum;
+	public final fun copy (JJIIIIILio/skein/classify/domain/TermWeightingEnum;)Lio/skein/classify/domain/HashingConfig;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/HashingConfig;JJIIIIILio/skein/classify/domain/TermWeightingEnum;ILjava/lang/Object;)Lio/skein/classify/domain/HashingConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCharNgramMax ()I
+	public final fun getCharNgramMin ()I
+	public final fun getKey0 ()J
+	public final fun getKey1 ()J
+	public final fun getNumFeatures ()I
+	public final fun getTermWeighting ()Lio/skein/classify/domain/TermWeightingEnum;
+	public final fun getWordNgramMax ()I
+	public final fun getWordNgramMin ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/HashingConfig$Companion {
+	public final fun randomKey ()Lio/skein/classify/domain/HashingConfig;
+}
+
+public final class io/skein/classify/domain/IdentifierField : io/skein/classify/domain/FieldSpec {
+	public fun <init> (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)V
+	public synthetic fun <init> (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lio/skein/classify/domain/SensitivityEnum;
+	public final fun copy (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)Lio/skein/classify/domain/IdentifierField;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/IdentifierField;Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILjava/lang/Object;)Lio/skein/classify/domain/IdentifierField;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getName ()Ljava/lang/String;
+	public fun getSensitivity ()Lio/skein/classify/domain/SensitivityEnum;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/ImportResult {
+	public fun <init> (Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public final fun acceptedCount ()I
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;Ljava/util/List;)Lio/skein/classify/domain/ImportResult;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/ImportResult;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lio/skein/classify/domain/ImportResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAccepted ()Ljava/util/List;
+	public final fun getRejected ()Ljava/util/List;
+	public final fun getWarnings ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun rejectedCount ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/Label {
+	public static final synthetic fun box-impl (Ljava/lang/String;)Lio/skein/classify/domain/Label;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/LabelField : io/skein/classify/domain/FieldSpec {
+	public fun <init> (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)V
+	public synthetic fun <init> (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lio/skein/classify/domain/SensitivityEnum;
+	public final fun copy (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)Lio/skein/classify/domain/LabelField;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/LabelField;Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILjava/lang/Object;)Lio/skein/classify/domain/LabelField;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getName ()Ljava/lang/String;
+	public fun getSensitivity ()Lio/skein/classify/domain/SensitivityEnum;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/LabelMetrics {
+	public synthetic fun <init> (Ljava/lang/String;DDDILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-tUGlzls ()Ljava/lang/String;
+	public final fun component2 ()D
+	public final fun component3 ()D
+	public final fun component4 ()D
+	public final fun component5 ()I
+	public final fun copy-P-xOs6Y (Ljava/lang/String;DDDI)Lio/skein/classify/domain/LabelMetrics;
+	public static synthetic fun copy-P-xOs6Y$default (Lio/skein/classify/domain/LabelMetrics;Ljava/lang/String;DDDIILjava/lang/Object;)Lio/skein/classify/domain/LabelMetrics;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getF1 ()D
+	public final fun getLabel-tUGlzls ()Ljava/lang/String;
+	public final fun getPrecision ()D
+	public final fun getRecall ()D
+	public final fun getSupport ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/LabelThresholds {
+	public static final field Companion Lio/skein/classify/domain/LabelThresholds$Companion;
+	public fun <init> (Ljava/util/Map;D)V
+	public final fun accepted (Lio/skein/classify/domain/MultiLabelPrediction;)Ljava/util/Set;
+	public final fun asMap ()Ljava/util/Map;
+	public final fun getFallback ()D
+	public final fun of-QmvxT68 (Ljava/lang/String;)D
+	public final fun tunedLabels ()Ljava/util/Set;
+}
+
+public final class io/skein/classify/domain/LabelThresholds$Companion {
+	public final fun uniform (D)Lio/skein/classify/domain/LabelThresholds;
+}
+
+public final class io/skein/classify/domain/LabeledFeatures {
+	public synthetic fun <init> (Ljava/lang/String;Lio/skein/classify/domain/FeatureVector;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-tUGlzls ()Ljava/lang/String;
+	public final fun component2 ()Lio/skein/classify/domain/FeatureVector;
+	public final fun copy--LtgrXA (Ljava/lang/String;Lio/skein/classify/domain/FeatureVector;)Lio/skein/classify/domain/LabeledFeatures;
+	public static synthetic fun copy--LtgrXA$default (Lio/skein/classify/domain/LabeledFeatures;Ljava/lang/String;Lio/skein/classify/domain/FeatureVector;ILjava/lang/Object;)Lio/skein/classify/domain/LabeledFeatures;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFeatures ()Lio/skein/classify/domain/FeatureVector;
+	public final fun getLabel-tUGlzls ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/MappedRecord {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2-yanYCR0 ()Ljava/lang/String;
+	public final fun copy-WC8whCs (Ljava/lang/String;Ljava/lang/String;)Lio/skein/classify/domain/MappedRecord;
+	public static synthetic fun copy-WC8whCs$default (Lio/skein/classify/domain/MappedRecord;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/skein/classify/domain/MappedRecord;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFeatureText ()Ljava/lang/String;
+	public final fun getLabel-yanYCR0 ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/MultiLabelCrossValidationReport {
+	public fun <init> (Ljava/util/List;Lio/skein/classify/domain/MultiLabelMetrics;Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Lio/skein/classify/domain/MultiLabelMetrics;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Lio/skein/classify/domain/MultiLabelMetrics;Ljava/util/List;)Lio/skein/classify/domain/MultiLabelCrossValidationReport;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/MultiLabelCrossValidationReport;Ljava/util/List;Lio/skein/classify/domain/MultiLabelMetrics;Ljava/util/List;ILjava/lang/Object;)Lio/skein/classify/domain/MultiLabelCrossValidationReport;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFolds ()Ljava/util/List;
+	public final fun getPooled ()Lio/skein/classify/domain/MultiLabelMetrics;
+	public final fun getPooledOutcomes ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun meanMacroF1 ()D
+	public final fun meanMicroF1 ()D
+	public final fun microF1StandardDeviation ()D
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/MultiLabelDatasetSplit {
+	public fun <init> (Ljava/util/List;Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;)Lio/skein/classify/domain/MultiLabelDatasetSplit;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/MultiLabelDatasetSplit;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lio/skein/classify/domain/MultiLabelDatasetSplit;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHoldout ()Ljava/util/List;
+	public final fun getTraining ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/MultiLabelMetrics {
+	public fun <init> (IDLio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/AveragedMetrics;DDLjava/util/List;)V
+	public final fun component1 ()I
+	public final fun component2 ()D
+	public final fun component3 ()Lio/skein/classify/domain/AveragedMetrics;
+	public final fun component4 ()Lio/skein/classify/domain/AveragedMetrics;
+	public final fun component5 ()D
+	public final fun component6 ()D
+	public final fun component7 ()Ljava/util/List;
+	public final fun copy (IDLio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/AveragedMetrics;DDLjava/util/List;)Lio/skein/classify/domain/MultiLabelMetrics;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/MultiLabelMetrics;IDLio/skein/classify/domain/AveragedMetrics;Lio/skein/classify/domain/AveragedMetrics;DDLjava/util/List;ILjava/lang/Object;)Lio/skein/classify/domain/MultiLabelMetrics;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCoverage ()D
+	public final fun getExactMatchRatio ()D
+	public final fun getMacro ()Lio/skein/classify/domain/AveragedMetrics;
+	public final fun getMicro ()Lio/skein/classify/domain/AveragedMetrics;
+	public final fun getPerLabel ()Ljava/util/List;
+	public final fun getSampleCount ()I
+	public final fun getThreshold ()D
+	public fun hashCode ()I
+	public final fun metricsFor-QmvxT68 (Ljava/lang/String;)Lio/skein/classify/domain/LabelMetrics;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/MultiLabelMetricsFactory {
+	public static final field INSTANCE Lio/skein/classify/domain/MultiLabelMetricsFactory;
+	public final fun from (Ljava/util/List;)Lio/skein/classify/domain/MultiLabelMetrics;
+	public final fun recallAtK (Ljava/util/List;I)D
+}
+
+public final class io/skein/classify/domain/MultiLabelOutcome {
+	public fun <init> (Ljava/util/Set;Lio/skein/classify/domain/MultiLabelPrediction;)V
+	public final fun component1 ()Ljava/util/Set;
+	public final fun component2 ()Lio/skein/classify/domain/MultiLabelPrediction;
+	public final fun copy (Ljava/util/Set;Lio/skein/classify/domain/MultiLabelPrediction;)Lio/skein/classify/domain/MultiLabelOutcome;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/MultiLabelOutcome;Ljava/util/Set;Lio/skein/classify/domain/MultiLabelPrediction;ILjava/lang/Object;)Lio/skein/classify/domain/MultiLabelOutcome;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExpected ()Ljava/util/Set;
+	public final fun getPrediction ()Lio/skein/classify/domain/MultiLabelPrediction;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/MultiLabelPrediction {
+	public fun <init> (Ljava/util/List;D)V
+	public final fun at (D)Lio/skein/classify/domain/MultiLabelPrediction;
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()D
+	public final fun copy (Ljava/util/List;D)Lio/skein/classify/domain/MultiLabelPrediction;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/MultiLabelPrediction;Ljava/util/List;DILjava/lang/Object;)Lio/skein/classify/domain/MultiLabelPrediction;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRanked ()Ljava/util/List;
+	public final fun getThreshold ()D
+	public fun hashCode ()I
+	public final fun labels ()Ljava/util/Set;
+	public final fun probabilityOf-QmvxT68 (Ljava/lang/String;)D
+	public fun toString ()Ljava/lang/String;
+	public final fun topK (I)Ljava/util/List;
+}
+
+public final class io/skein/classify/domain/MultiLabelPredictionFactory {
+	public static final field INSTANCE Lio/skein/classify/domain/MultiLabelPredictionFactory;
+	public final fun fromLogits (Ljava/util/Map;D)Lio/skein/classify/domain/MultiLabelPrediction;
+	public final fun logistic (D)D
+}
+
+public final class io/skein/classify/domain/MultiLabeledFeatures {
+	public fun <init> (Lio/skein/classify/domain/FeatureVector;Ljava/util/Set;Ljava/lang/String;)V
+	public synthetic fun <init> (Lio/skein/classify/domain/FeatureVector;Ljava/util/Set;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/skein/classify/domain/FeatureVector;
+	public final fun component2 ()Ljava/util/Set;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (Lio/skein/classify/domain/FeatureVector;Ljava/util/Set;Ljava/lang/String;)Lio/skein/classify/domain/MultiLabeledFeatures;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/MultiLabeledFeatures;Lio/skein/classify/domain/FeatureVector;Ljava/util/Set;Ljava/lang/String;ILjava/lang/Object;)Lio/skein/classify/domain/MultiLabeledFeatures;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFeatures ()Lio/skein/classify/domain/FeatureVector;
+	public final fun getGroup ()Ljava/lang/String;
+	public final fun getLabels ()Ljava/util/Set;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/MultiLabeledText {
+	public fun <init> (Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/Set;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;)Lio/skein/classify/domain/MultiLabeledText;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/MultiLabeledText;Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;ILjava/lang/Object;)Lio/skein/classify/domain/MultiLabeledText;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFeatureText ()Ljava/lang/String;
+	public final fun getGroup ()Ljava/lang/String;
+	public final fun getLabels ()Ljava/util/Set;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/NumericField : io/skein/classify/domain/FieldSpec {
+	public fun <init> (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)V
+	public synthetic fun <init> (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lio/skein/classify/domain/SensitivityEnum;
+	public final fun copy (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)Lio/skein/classify/domain/NumericField;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/NumericField;Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILjava/lang/Object;)Lio/skein/classify/domain/NumericField;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getName ()Ljava/lang/String;
+	public fun getSensitivity ()Lio/skein/classify/domain/SensitivityEnum;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/Prediction {
+	public synthetic fun <init> (Ljava/lang/String;DLjava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-tUGlzls ()Ljava/lang/String;
+	public final fun component2 ()D
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy-MpPZEpA (Ljava/lang/String;DLjava/util/List;)Lio/skein/classify/domain/Prediction;
+	public static synthetic fun copy-MpPZEpA$default (Lio/skein/classify/domain/Prediction;Ljava/lang/String;DLjava/util/List;ILjava/lang/Object;)Lio/skein/classify/domain/Prediction;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAlternatives ()Ljava/util/List;
+	public final fun getConfidence ()D
+	public final fun getLabel-tUGlzls ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun isConfident (D)Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/PredictionFactory {
+	public static final field INSTANCE Lio/skein/classify/domain/PredictionFactory;
+	public final fun fromLogScores (Ljava/util/Map;)Lio/skein/classify/domain/Prediction;
+	public final fun fromLogScores (Ljava/util/Map;Lio/skein/classify/domain/Calibration;)Lio/skein/classify/domain/Prediction;
+}
+
+public final class io/skein/classify/domain/PredictionOutcome {
+	public synthetic fun <init> (Ljava/lang/String;Lio/skein/classify/domain/Prediction;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-tUGlzls ()Ljava/lang/String;
+	public final fun component2 ()Lio/skein/classify/domain/Prediction;
+	public final fun copy--LtgrXA (Ljava/lang/String;Lio/skein/classify/domain/Prediction;)Lio/skein/classify/domain/PredictionOutcome;
+	public static synthetic fun copy--LtgrXA$default (Lio/skein/classify/domain/PredictionOutcome;Ljava/lang/String;Lio/skein/classify/domain/Prediction;ILjava/lang/Object;)Lio/skein/classify/domain/PredictionOutcome;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExpected-tUGlzls ()Ljava/lang/String;
+	public final fun getPrediction ()Lio/skein/classify/domain/Prediction;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/PrivacyModeEnum : java/lang/Enum {
+	public static final field ENCRYPTED_SOURCE Lio/skein/classify/domain/PrivacyModeEnum;
+	public static final field FEATURES_ONLY Lio/skein/classify/domain/PrivacyModeEnum;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/skein/classify/domain/PrivacyModeEnum;
+	public static fun values ()[Lio/skein/classify/domain/PrivacyModeEnum;
+}
+
+public final class io/skein/classify/domain/Record {
+	public static final synthetic fun box-impl (Ljava/util/Map;)Lio/skein/classify/domain/Record;
+	public static fun constructor-impl (Ljava/util/Map;)Ljava/util/Map;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/util/Map;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/util/Map;Ljava/util/Map;)Z
+	public static final fun fieldNames-impl (Ljava/util/Map;)Ljava/util/Set;
+	public static final fun get-impl (Ljava/util/Map;Ljava/lang/String;)Ljava/lang/Object;
+	public final fun getValues ()Ljava/util/Map;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/util/Map;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/util/Map;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/util/Map;
+}
+
+public final class io/skein/classify/domain/RejectedRecord {
+	public synthetic fun <init> (Ljava/util/Map;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-k2NCicE ()Ljava/util/Map;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy-WcqbbIk (Ljava/util/Map;Ljava/util/List;)Lio/skein/classify/domain/RejectedRecord;
+	public static synthetic fun copy-WcqbbIk$default (Lio/skein/classify/domain/RejectedRecord;Ljava/util/Map;Ljava/util/List;ILjava/lang/Object;)Lio/skein/classify/domain/RejectedRecord;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReasons ()Ljava/util/List;
+	public final fun getRecord-k2NCicE ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/ReviewCandidate {
+	public synthetic fun <init> (Ljava/util/Map;Lio/skein/classify/domain/Prediction;DLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-k2NCicE ()Ljava/util/Map;
+	public final fun component2 ()Lio/skein/classify/domain/Prediction;
+	public final fun component3 ()D
+	public final fun copy-zxekuog (Ljava/util/Map;Lio/skein/classify/domain/Prediction;D)Lio/skein/classify/domain/ReviewCandidate;
+	public static synthetic fun copy-zxekuog$default (Lio/skein/classify/domain/ReviewCandidate;Ljava/util/Map;Lio/skein/classify/domain/Prediction;DILjava/lang/Object;)Lio/skein/classify/domain/ReviewCandidate;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMargin ()D
+	public final fun getPrediction ()Lio/skein/classify/domain/Prediction;
+	public final fun getRecord-k2NCicE ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/Schema {
+	public static final field Companion Lio/skein/classify/domain/Schema$Companion;
+	public final fun field (Ljava/lang/String;)Lio/skein/classify/domain/FieldSpec;
+	public final fun getFields ()Ljava/util/List;
+	public final fun getLabelField ()Lio/skein/classify/domain/LabelField;
+}
+
+public final class io/skein/classify/domain/Schema$Companion {
+	public final fun define (Lkotlin/jvm/functions/Function1;)Lio/skein/classify/domain/Schema;
+}
+
+public final class io/skein/classify/domain/SchemaBuilder {
+	public fun <init> ()V
+	public final fun build ()Lio/skein/classify/domain/Schema;
+	public final fun categorical (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)V
+	public static synthetic fun categorical$default (Lio/skein/classify/domain/SchemaBuilder;Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILjava/lang/Object;)V
+	public final fun identifier (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)V
+	public static synthetic fun identifier$default (Lio/skein/classify/domain/SchemaBuilder;Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILjava/lang/Object;)V
+	public final fun label (Ljava/lang/String;)V
+	public final fun numeric (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)V
+	public static synthetic fun numeric$default (Lio/skein/classify/domain/SchemaBuilder;Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILjava/lang/Object;)V
+	public final fun text (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)V
+	public static synthetic fun text$default (Lio/skein/classify/domain/SchemaBuilder;Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILjava/lang/Object;)V
+}
+
+public final class io/skein/classify/domain/ScoredLabel {
+	public synthetic fun <init> (Ljava/lang/String;DLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-tUGlzls ()Ljava/lang/String;
+	public final fun component2 ()D
+	public final fun copy--LtgrXA (Ljava/lang/String;D)Lio/skein/classify/domain/ScoredLabel;
+	public static synthetic fun copy--LtgrXA$default (Lio/skein/classify/domain/ScoredLabel;Ljava/lang/String;DILjava/lang/Object;)Lio/skein/classify/domain/ScoredLabel;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLabel-tUGlzls ()Ljava/lang/String;
+	public final fun getProbability ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/SensitivityEnum : java/lang/Enum {
+	public static final field PII Lio/skein/classify/domain/SensitivityEnum;
+	public static final field PUBLIC Lio/skein/classify/domain/SensitivityEnum;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/skein/classify/domain/SensitivityEnum;
+	public static fun values ()[Lio/skein/classify/domain/SensitivityEnum;
+}
+
+public final class io/skein/classify/domain/SparseMatrix {
+	public final fun getBlocks ()Ljava/util/List;
+	public final fun getColumnCount ()I
+	public final fun getRowCount ()I
+	public final fun nonZeroCount ()J
+	public final fun selectRows ([I)Lio/skein/classify/domain/SparseMatrix;
+}
+
+public final class io/skein/classify/domain/SparseMatrixBlock {
+	public fun <init> (I[I[I[F)V
+	public final fun getColumnIndices ()[I
+	public final fun getFirstRow ()I
+	public final fun getRowOffsets ()[I
+	public final fun getValues ()[F
+	public final fun rowCount ()I
+}
+
+public final class io/skein/classify/domain/SparseMatrixBuilder {
+	public fun <init> (II)V
+	public synthetic fun <init> (IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun addRow (Lio/skein/classify/domain/FeatureVector;)Lio/skein/classify/domain/SparseMatrixBuilder;
+	public final fun addRow ([I[FII)Lio/skein/classify/domain/SparseMatrixBuilder;
+	public final fun build ()Lio/skein/classify/domain/SparseMatrix;
+}
+
+public final class io/skein/classify/domain/TermWeightingEnum : java/lang/Enum {
+	public static final field RAW_COUNT Lio/skein/classify/domain/TermWeightingEnum;
+	public static final field SUBLINEAR Lio/skein/classify/domain/TermWeightingEnum;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/skein/classify/domain/TermWeightingEnum;
+	public static fun values ()[Lio/skein/classify/domain/TermWeightingEnum;
+}
+
+public final class io/skein/classify/domain/TextField : io/skein/classify/domain/FieldSpec {
+	public fun <init> (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)V
+	public synthetic fun <init> (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lio/skein/classify/domain/SensitivityEnum;
+	public final fun copy (Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;)Lio/skein/classify/domain/TextField;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/TextField;Ljava/lang/String;Lio/skein/classify/domain/SensitivityEnum;ILjava/lang/Object;)Lio/skein/classify/domain/TextField;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getName ()Ljava/lang/String;
+	public fun getSensitivity ()Lio/skein/classify/domain/SensitivityEnum;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/ThresholdPoint {
+	public fun <init> (DDDDD)V
+	public final fun component1 ()D
+	public final fun component2 ()D
+	public final fun component3 ()D
+	public final fun component4 ()D
+	public final fun component5 ()D
+	public final fun copy (DDDDD)Lio/skein/classify/domain/ThresholdPoint;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/ThresholdPoint;DDDDDILjava/lang/Object;)Lio/skein/classify/domain/ThresholdPoint;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCoverage ()D
+	public final fun getF1 ()D
+	public final fun getPrecision ()D
+	public final fun getRecall ()D
+	public final fun getThreshold ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/UncertaintyStrategyEnum : java/lang/Enum {
+	public static final field ENTROPY Lio/skein/classify/domain/UncertaintyStrategyEnum;
+	public static final field LEAST_CONFIDENCE Lio/skein/classify/domain/UncertaintyStrategyEnum;
+	public static final field MARGIN Lio/skein/classify/domain/UncertaintyStrategyEnum;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/skein/classify/domain/UncertaintyStrategyEnum;
+	public static fun values ()[Lio/skein/classify/domain/UncertaintyStrategyEnum;
+}
+
+public final class io/skein/classify/domain/ValidationResult {
+	public fun <init> (Ljava/util/List;Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;)Lio/skein/classify/domain/ValidationResult;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/ValidationResult;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lio/skein/classify/domain/ValidationResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getErrors ()Ljava/util/List;
+	public final fun getWarnings ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun isValid ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/VectorizerCanary {
+	public static final field Companion Lio/skein/classify/domain/VectorizerCanary$Companion;
+	public static final field DEFAULT_TOLERANCE D
+	public static final field MAXIMUM_DRIFT D
+	public static final field MAXIMUM_TOLERANCE D
+	public fun <init> (Ljava/util/List;Ljava/util/List;D)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/List;DILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun dimension ()I
+	public final fun drift (I[F)D
+	public final fun getProbes ()Ljava/util/List;
+	public final fun getReferences ()Ljava/util/List;
+	public final fun getTolerance ()D
+	public final fun matches (Ljava/util/List;)Z
+	public final fun worstDrift (Ljava/util/List;)Lio/skein/classify/domain/VectorizerCanary$CanaryDrift;
+}
+
+public final class io/skein/classify/domain/VectorizerCanary$CanaryDrift {
+	public fun <init> (Ljava/lang/String;D)V
+	public final fun getDistance ()D
+	public final fun getProbe ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/VectorizerCanary$Companion {
+}
+
+public final class io/skein/classify/domain/VectorizerFingerprint {
+	public fun <init> (Ljava/lang/String;ILjava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;ILjava/lang/String;)Lio/skein/classify/domain/VectorizerFingerprint;
+	public static synthetic fun copy$default (Lio/skein/classify/domain/VectorizerFingerprint;Ljava/lang/String;ILjava/lang/String;ILjava/lang/Object;)Lio/skein/classify/domain/VectorizerFingerprint;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getConfigDigest ()Ljava/lang/String;
+	public final fun getDimension ()I
+	public final fun getKind ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/domain/WeightEncodingEnum : java/lang/Enum {
+	public static final field FLOAT16 Lio/skein/classify/domain/WeightEncodingEnum;
+	public static final field FLOAT32 Lio/skein/classify/domain/WeightEncodingEnum;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/skein/classify/domain/WeightEncodingEnum;
+	public static fun values ()[Lio/skein/classify/domain/WeightEncodingEnum;
+}
+
+public abstract interface class io/skein/classify/infrastructure/DifferentiableFunction {
+	public abstract fun getDimension ()I
+	public abstract fun valueAndGradient ([D[D)D
+}
+
+public final class io/skein/classify/infrastructure/InMemoryFeatureStore : io/skein/classify/spi/FeatureStore {
+	public static final field HASH_PRIME J
+	public fun <init> ()V
+	public fun add (Lio/skein/classify/domain/LabeledFeatures;)V
+	public fun all ()Ljava/util/List;
+	public fun clear ()V
+	public fun labels ()Ljava/util/Set;
+	public fun size ()I
+}
+
+public final class io/skein/classify/infrastructure/IntDoubleHashMap {
+	public static final field EMPTY I
+	public static final field MIN_CAPACITY I
+	public static final field SPREAD_SHIFT I
+	public fun <init> (I)V
+	public final fun get (I)D
+	public final fun put (ID)V
+}
+
+public final class io/skein/classify/infrastructure/IntFloatHashMap {
+	public static final field DEFAULT_CAPACITY I
+	public static final field EMPTY I
+	public static final field INT_BITS I
+	public static final field LOAD_FACTOR_DENOMINATOR I
+	public static final field LOAD_FACTOR_NUMERATOR I
+	public static final field LOW_INT_MASK J
+	public static final field SPREAD_SHIFT I
+	public fun <init> ()V
+	public fun <init> (I)V
+	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun addTo (IF)V
+	public final fun clear ()V
+	public final fun size ()I
+	public final fun sortedKeysAndValues ()Lkotlin/Pair;
+}
+
+public final class io/skein/classify/infrastructure/LbfgsMinimizer {
+	public fun <init> ()V
+	public fun <init> (IID)V
+	public synthetic fun <init> (IIDILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun minimize (Lio/skein/classify/infrastructure/DifferentiableFunction;[D)Lio/skein/classify/infrastructure/LbfgsResult;
+	public static synthetic fun minimize$default (Lio/skein/classify/infrastructure/LbfgsMinimizer;Lio/skein/classify/infrastructure/DifferentiableFunction;[DILjava/lang/Object;)Lio/skein/classify/infrastructure/LbfgsResult;
+}
+
+public final class io/skein/classify/infrastructure/LbfgsMultiLabelLearner : io/skein/classify/spi/BatchLearner {
+	public fun <init> (IDDIID)V
+	public synthetic fun <init> (IDDIIDILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun fit (Ljava/util/List;)Lio/skein/classify/spi/MultiLabelClassifier;
+}
+
+public final class io/skein/classify/infrastructure/LbfgsResult {
+	public fun <init> ([DDDIZ)V
+	public final fun getConverged ()Z
+	public final fun getGradientNorm ()D
+	public final fun getIterations ()I
+	public final fun getPoint ()[D
+	public final fun getValue ()D
+}
+
+public final class io/skein/classify/infrastructure/LogisticObjective : io/skein/classify/infrastructure/DifferentiableFunction {
+	public fun <init> (Lio/skein/classify/domain/SparseMatrix;[ID)V
+	public fun getDimension ()I
+	public fun valueAndGradient ([D[D)D
+}
+
+public final class io/skein/classify/infrastructure/LogisticRegressionSgdClassifier : io/skein/classify/spi/Classifier {
+	public fun <init> ()V
+	public fun <init> (DDD)V
+	public synthetic fun <init> (DDDILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun classify (Lio/skein/classify/domain/FeatureVector;)Lio/skein/classify/domain/Prediction;
+	public fun explain-fy-Umwo (Lio/skein/classify/domain/FeatureVector;Ljava/lang/String;I)Lio/skein/classify/domain/Explanation;
+	public fun forget ()V
+	public fun hyperparameters ()Lio/skein/classify/domain/ClassifierHyperparameters;
+	public fun labels ()Ljava/util/Set;
+	public fun learn-xTIKhbA (Lio/skein/classify/domain/FeatureVector;Ljava/lang/String;)V
+	public fun learnAll (Ljava/util/List;)V
+	public fun logScores (Lio/skein/classify/domain/FeatureVector;)Ljava/util/Map;
+}
+
+public final class io/skein/classify/infrastructure/MultiLabelLogisticClassifier : io/skein/classify/spi/MultiLabelClassifier {
+	public fun <init> (Lio/skein/classify/infrastructure/MultiLabelWeights;Lio/skein/classify/domain/ClassifierHyperparameters;)V
+	public synthetic fun <init> (Lio/skein/classify/infrastructure/MultiLabelWeights;Lio/skein/classify/domain/ClassifierHyperparameters;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun explain-fy-Umwo (Lio/skein/classify/domain/FeatureVector;Ljava/lang/String;I)Lio/skein/classify/domain/Explanation;
+	public fun hyperparameters ()Lio/skein/classify/domain/ClassifierHyperparameters;
+	public fun labels ()Ljava/util/Set;
+	public fun logits (Lio/skein/classify/domain/FeatureVector;)Ljava/util/Map;
+	public final fun weights ()Lio/skein/classify/infrastructure/MultiLabelWeights;
+}
+
+public final class io/skein/classify/infrastructure/MultiLabelWeights {
+	public static final field Companion Lio/skein/classify/infrastructure/MultiLabelWeights$Companion;
+	public fun <init> (Ljava/util/List;[D[I[I[F)V
+	public final fun getFeatureCount ()I
+	public final fun getFeatureOffsets ()[I
+	public final fun getIntercepts ()[D
+	public final fun getLabelIndices ()[I
+	public final fun getLabels ()Ljava/util/List;
+	public final fun getWeights ()[F
+	public final fun logits (Lio/skein/classify/domain/FeatureVector;)[D
+	public final fun nonZeroCount ()I
+	public final fun weightOf (II)D
+}
+
+public final class io/skein/classify/infrastructure/MultiLabelWeights$Companion {
+	public final fun fromLabelMajor (Ljava/util/List;[DLjava/util/List;ID)Lio/skein/classify/infrastructure/MultiLabelWeights;
+}
+
+public final class io/skein/classify/infrastructure/NaiveBayesClassifier : io/skein/classify/spi/Classifier {
+	public fun <init> ()V
+	public fun <init> (D)V
+	public synthetic fun <init> (DILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun classify (Lio/skein/classify/domain/FeatureVector;)Lio/skein/classify/domain/Prediction;
+	public fun explain-fy-Umwo (Lio/skein/classify/domain/FeatureVector;Ljava/lang/String;I)Lio/skein/classify/domain/Explanation;
+	public fun forget ()V
+	public fun hyperparameters ()Lio/skein/classify/domain/ClassifierHyperparameters;
+	public fun labels ()Ljava/util/Set;
+	public fun learn-xTIKhbA (Lio/skein/classify/domain/FeatureVector;Ljava/lang/String;)V
+	public fun learnAll (Ljava/util/List;)V
+	public fun logScores (Lio/skein/classify/domain/FeatureVector;)Ljava/util/Map;
+}
+
+public final class io/skein/classify/infrastructure/SipHash {
+	public static final field INSTANCE Lio/skein/classify/infrastructure/SipHash;
+	public final fun hash ([BIJJ)J
+	public final fun hash ([BJJ)J
+}
+
+public final class io/skein/classify/infrastructure/TrainingParallelism {
+	public static final field INSTANCE Lio/skein/classify/infrastructure/TrainingParallelism;
+	public final fun bytesPerWorker (II)J
+	public final fun workerCount (IIJI)I
+	public static synthetic fun workerCount$default (Lio/skein/classify/infrastructure/TrainingParallelism;IIJIILjava/lang/Object;)I
+}
+
+public final class io/skein/classify/infrastructure/WeightCodec {
+	public static final field INSTANCE Lio/skein/classify/infrastructure/WeightCodec;
+	public final fun decodeLabelIndices ([I[I)[I
+	public final fun decodeWeights ([BLio/skein/classify/domain/WeightEncodingEnum;)[F
+	public final fun encodeLabelIndices ([I[I)[I
+	public final fun encodeWeights ([FLio/skein/classify/domain/WeightEncodingEnum;)[B
+	public final fun narrowestEncoding ([F)Lio/skein/classify/domain/WeightEncodingEnum;
+}
+
+public abstract interface class io/skein/classify/spi/BatchLearner {
+	public abstract fun fit (Ljava/util/List;)Lio/skein/classify/spi/MultiLabelClassifier;
+}
+
+public abstract interface class io/skein/classify/spi/BatchVectorizer : io/skein/classify/spi/Vectorizer {
+	public abstract fun vectorizeAll (Ljava/util/List;)Ljava/util/List;
+}
+
+public final class io/skein/classify/spi/BatchVectorizerKt {
+	public static final fun vectorizeAll (Lio/skein/classify/spi/Vectorizer;Ljava/util/List;)Ljava/util/List;
+}
+
+public abstract interface class io/skein/classify/spi/Classifier {
+	public abstract fun classify (Lio/skein/classify/domain/FeatureVector;)Lio/skein/classify/domain/Prediction;
+	public fun explain-fy-Umwo (Lio/skein/classify/domain/FeatureVector;Ljava/lang/String;I)Lio/skein/classify/domain/Explanation;
+	public abstract fun forget ()V
+	public fun hyperparameters ()Lio/skein/classify/domain/ClassifierHyperparameters;
+	public abstract fun labels ()Ljava/util/Set;
+	public abstract fun learn-xTIKhbA (Lio/skein/classify/domain/FeatureVector;Ljava/lang/String;)V
+	public fun learnAll (Ljava/util/List;)V
+	public fun logScores (Lio/skein/classify/domain/FeatureVector;)Ljava/util/Map;
+}
+
+public abstract interface class io/skein/classify/spi/FeatureStore {
+	public abstract fun add (Lio/skein/classify/domain/LabeledFeatures;)V
+	public fun addAll (Ljava/util/Collection;)V
+	public abstract fun all ()Ljava/util/List;
+	public abstract fun clear ()V
+	public abstract fun labels ()Ljava/util/Set;
+	public abstract fun size ()I
+}
+
+public abstract interface class io/skein/classify/spi/MultiLabelClassifier {
+	public fun explain-fy-Umwo (Lio/skein/classify/domain/FeatureVector;Ljava/lang/String;I)Lio/skein/classify/domain/Explanation;
+	public fun hyperparameters ()Lio/skein/classify/domain/ClassifierHyperparameters;
+	public abstract fun labels ()Ljava/util/Set;
+	public abstract fun logits (Lio/skein/classify/domain/FeatureVector;)Ljava/util/Map;
+	public fun predict (Lio/skein/classify/domain/FeatureVector;D)Lio/skein/classify/domain/MultiLabelPrediction;
+	public fun scoreAll (Lio/skein/classify/domain/FeatureVector;)Ljava/util/Map;
+}
+
+public abstract interface class io/skein/classify/spi/RecordSource {
+	public abstract fun stream ()Lkotlin/sequences/Sequence;
+}
+
+public abstract interface class io/skein/classify/spi/Vectorizer {
+	public fun canary ()Lio/skein/classify/domain/VectorizerCanary;
+	public abstract fun dimension ()I
+	public abstract fun fingerprint ()Lio/skein/classify/domain/VectorizerFingerprint;
+	public abstract fun vectorize (Ljava/lang/String;)Lio/skein/classify/domain/FeatureVector;
+}
+

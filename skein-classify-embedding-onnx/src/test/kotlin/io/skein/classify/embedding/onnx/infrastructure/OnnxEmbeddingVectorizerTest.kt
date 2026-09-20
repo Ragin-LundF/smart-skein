@@ -7,6 +7,8 @@ import io.skein.classify.embedding.onnx.domain.TokenEmbeddings
 import io.skein.classify.embedding.onnx.domain.TokenizedText
 import io.skein.classify.embedding.onnx.spi.EmbeddingRuntime
 import io.skein.classify.embedding.onnx.spi.EmbeddingTokenizer
+import io.skein.classify.spi.BatchVectorizer
+import io.skein.classify.spi.Vectorizer
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -207,5 +209,23 @@ internal class OnnxEmbeddingVectorizerTest {
 
         assertTrue(actual = runtime.closed)
         assertTrue(actual = tokenizer.closed)
+    }
+
+    /**
+     * One inference call per batch rather than per record is the difference a GPU or a vector unit
+     * exists for, so library code must be able to detect the capability through the port alone.
+     */
+    @Test
+    internal fun `announces itself as batchable through the port`() {
+        val runtime = RecordingRuntime()
+        val subject: Vectorizer = vectorizer(runtime = runtime)
+
+        assertTrue(actual = subject is BatchVectorizer)
+
+        val vectors = subject.vectorizeAll(texts = listOf("a", "bb", "ccc"))
+
+        assertEquals(expected = 3, actual = vectors.size)
+        // One encode for the whole list, not one per text.
+        assertEquals(expected = listOf(3), actual = runtime.seenSizes)
     }
 }

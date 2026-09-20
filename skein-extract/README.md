@@ -41,8 +41,12 @@ If that matters for your data, read the persistence section before saving a tagg
 
 ## Documentation
 
-**[Full documentation →](../docs/extract/README.md)** — the pattern DSL, positional and
-key-anchored slots, template clustering, training and persisting the CRF tagger, and the feature
-retention modes.
+**[Full documentation →](../docs/extract/README.md)** — which of the two approaches to use,
+with a page each for [slot filling](../docs/extract/slots.md),
+[the pattern DSL](../docs/extract/patterns.md),
+[template clustering](../docs/extract/clustering.md),
+[CRF tagging](../docs/extract/crf.md) and
+[persisting a tagger](../docs/extract/persistence.md) — the last of which covers the feature
+retention modes named above.
 
 Related: [Architecture](../docs/architecture.md) · [All documentation](../docs/README.md)

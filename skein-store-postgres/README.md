@@ -39,8 +39,10 @@ Brings a connection pool and Liquibase; the PostgreSQL driver is `runtimeOnly`.
 
 ## Documentation
 
-**[Full documentation →](../docs/store-postgres/README.md)** — schema migrations, connection
-setup, the encryption key contract, and what `ENCRYPTED_SOURCE` does and does not protect.
+**[Full documentation →](../docs/store-postgres/README.md)** — when to reach for it and a
+quick start, with [components](../docs/store-postgres/components.md) covering schema migrations,
+connection setup, the encryption key contract and what `ENCRYPTED_SOURCE` does and does not
+protect, and [testing](../docs/store-postgres/testing.md) covering the Docker requirement.
 
 Related: [Single-label storage](../docs/classify/single-label.md#storage) ·
 [All documentation](../docs/README.md)

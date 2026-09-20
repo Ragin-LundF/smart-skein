@@ -1,5 +1,8 @@
 package io.skein.examples.embedding
 
+import io.skein.classify.embedding.http.domain.EmbeddingServiceConfig
+import io.skein.classify.embedding.http.infrastructure.HttpEmbeddingVectorizer
+
 /**
  * Route B — embeddings from an external service, here LM Studio.
  *
@@ -24,19 +27,36 @@ fun runExternalEmbeddingExample() {
     println("dimension: ${vectorizer.dimension()}")
     println("fingerprint digest: ${vectorizer.fingerprint().configDigest.take(n = 16)}...")
 
-    val metrics = EmbeddingComparison.evaluate(
-        vectorizer = vectorizer,
-        batched = { texts -> vectorizer.vectorizeAll(texts = texts) },
-    )
+    val metrics = EmbeddingComparison.evaluate(vectorizer = vectorizer)
     EmbeddingComparison.report(embeddingName = config.model, embedding = metrics)
 
     println()
-    println("Remember what the fingerprint can and cannot do here")
+    println("What the fingerprint cannot do, and what the canary does instead")
     println("-".repeat(n = 78))
-    println("   It pins the model name, your declared revision, the prefix and the width. It")
-    println("   cannot detect the served weights changing, because nothing in the protocol")
-    println("   reveals them. Bump EmbeddingServiceConfig.modelRevision whenever you update the")
-    println("   model, or train a model against vectors it will never see again.")
+    println("   The fingerprint pins the model name, your declared revision, the prefix and the")
+    println("   width. It cannot detect the served weights changing, because nothing in the")
+    println("   protocol reveals them. Bump EmbeddingServiceConfig.modelRevision whenever you")
+    println("   update the model — but that is a declaration, and nothing enforces it.")
+    println()
+    reportCanary(vectorizer = vectorizer)
+}
+
+/**
+ * The part that actually checks. The probes are embedded once here and again inside
+ * `ModelStore.saveMultiLabel`, and re-embedded on every `loadMultiLabel` — so a model changed on
+ * the server stops the load instead of quietly returning wrong labels.
+ */
+private fun reportCanary(vectorizer: HttpEmbeddingVectorizer) {
+    val canary = vectorizer.canary()
+    if (canary == null) {
+        println("   No canary configured. Set EmbeddingServiceConfig.canaryProbes to enable it.")
+        return
+    }
+    val reEmbedded = canary.probes.map { probe -> vectorizer.vectorize(text = probe).values }
+    val worst = canary.worstDrift(observed = reEmbedded)
+    println("   Canary: ${canary.probes.size} probes, tolerance ${canary.tolerance}.")
+    println("   Worst drift right now: ${worst.distance} — a changed model would push this past")
+    println("   the tolerance and loadMultiLabel would throw VectorizerCanaryException.")
 }
 
 private fun printSetupInstructions(config: EmbeddingServiceConfig) {

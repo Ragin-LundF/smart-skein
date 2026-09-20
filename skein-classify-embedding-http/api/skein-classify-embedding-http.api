@@ -1,0 +1,70 @@
+public final class io/skein/classify/embedding/http/domain/EmbeddingProbes {
+	public static final field INSTANCE Lio/skein/classify/embedding/http/domain/EmbeddingProbes;
+	public final fun getDEFAULT ()Ljava/util/List;
+}
+
+public final class io/skein/classify/embedding/http/domain/EmbeddingServiceConfig {
+	public static final field Companion Lio/skein/classify/embedding/http/domain/EmbeddingServiceConfig$Companion;
+	public static final field DEFAULT_BATCH_SIZE I
+	public static final field DEFAULT_TIMEOUT_SECONDS J
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/util/Map;Ljava/util/List;DIJ)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/util/Map;Ljava/util/List;DIJILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/Integer;
+	public final fun component6 ()Ljava/util/Map;
+	public final fun component7 ()Ljava/util/List;
+	public final fun component8 ()D
+	public final fun component9 ()I
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/util/Map;Ljava/util/List;DIJ)Lio/skein/classify/embedding/http/domain/EmbeddingServiceConfig;
+	public static synthetic fun copy$default (Lio/skein/classify/embedding/http/domain/EmbeddingServiceConfig;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;Ljava/util/Map;Ljava/util/List;DIJILjava/lang/Object;)Lio/skein/classify/embedding/http/domain/EmbeddingServiceConfig;
+	public final fun embeddingsUrl ()Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBaseUrl ()Ljava/lang/String;
+	public final fun getBatchSize ()I
+	public final fun getCanaryProbes ()Ljava/util/List;
+	public final fun getCanaryTolerance ()D
+	public final fun getDimension ()Ljava/lang/Integer;
+	public final fun getHeaders ()Ljava/util/Map;
+	public final fun getInputPrefix ()Ljava/lang/String;
+	public final fun getModel ()Ljava/lang/String;
+	public final fun getModelRevision ()Ljava/lang/String;
+	public final fun getTimeoutSeconds ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/classify/embedding/http/domain/EmbeddingServiceConfig$Companion {
+	public final fun lmStudioMultilingualE5Small ()Lio/skein/classify/embedding/http/domain/EmbeddingServiceConfig;
+}
+
+public final class io/skein/classify/embedding/http/infrastructure/HttpEmbeddingVectorizer : io/skein/classify/spi/BatchVectorizer {
+	public fun <init> (Lio/skein/classify/embedding/http/domain/EmbeddingServiceConfig;Lio/skein/classify/embedding/http/spi/EmbeddingTransport;)V
+	public synthetic fun <init> (Lio/skein/classify/embedding/http/domain/EmbeddingServiceConfig;Lio/skein/classify/embedding/http/spi/EmbeddingTransport;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun canary ()Lio/skein/classify/domain/VectorizerCanary;
+	public fun dimension ()I
+	public fun fingerprint ()Lio/skein/classify/domain/VectorizerFingerprint;
+	public final fun isReachable ()Z
+	public fun vectorize (Ljava/lang/String;)Lio/skein/classify/domain/FeatureVector;
+	public fun vectorizeAll (Ljava/util/List;)Ljava/util/List;
+}
+
+public final class io/skein/classify/embedding/http/infrastructure/JdkHttpEmbeddingTransport : io/skein/classify/embedding/http/spi/EmbeddingTransport {
+	public fun <init> (Ljava/time/Duration;Ljava/net/http/HttpClient;)V
+	public synthetic fun <init> (Ljava/time/Duration;Ljava/net/http/HttpClient;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun post (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)Lio/skein/classify/embedding/http/spi/EmbeddingTransportResponse;
+}
+
+public abstract interface class io/skein/classify/embedding/http/spi/EmbeddingTransport {
+	public abstract fun post (Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)Lio/skein/classify/embedding/http/spi/EmbeddingTransportResponse;
+}
+
+public final class io/skein/classify/embedding/http/spi/EmbeddingTransportResponse {
+	public fun <init> (ILjava/lang/String;)V
+	public final fun getBody ()Ljava/lang/String;
+	public final fun getStatusCode ()I
+}
+

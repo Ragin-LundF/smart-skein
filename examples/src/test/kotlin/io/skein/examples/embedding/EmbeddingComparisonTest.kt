@@ -2,6 +2,7 @@ package io.skein.examples.embedding
 
 import io.skein.classify.domain.FeatureVector
 import io.skein.classify.domain.VectorizerFingerprint
+import io.skein.classify.spi.BatchVectorizer
 import io.skein.classify.spi.Vectorizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -52,21 +53,35 @@ internal class EmbeddingComparisonTest {
         assertTrue(actual = metrics.perLabel.isNotEmpty())
     }
 
+    /** The same vectorizer, but announcing the batch capability through the port. */
+    private class BatchingBagOfWordsVectorizer : BatchVectorizer {
+
+        private val delegate = BagOfWordsVectorizer()
+
+        var batchCalls: Int = 0
+            private set
+
+        override fun vectorize(text: String): FeatureVector = delegate.vectorize(text = text)
+
+        override fun vectorizeAll(texts: List<String>): List<FeatureVector> {
+            batchCalls += 1
+            return texts.map { text -> delegate.vectorize(text = text) }
+        }
+
+        override fun dimension(): Int = delegate.dimension()
+
+        override fun fingerprint(): VectorizerFingerprint = delegate.fingerprint()
+    }
+
     @Test
-    internal fun `uses the batch path when one is supplied`() {
-        val vectorizer = BagOfWordsVectorizer()
-        var batchedCalls = 0
+    internal fun `batches through the port when the vectorizer supports it`() {
+        val vectorizer = BatchingBagOfWordsVectorizer()
 
-        val metrics = EmbeddingComparison.evaluate(
-            vectorizer = vectorizer,
-            batched = { texts ->
-                batchedCalls++
-                texts.map { text -> vectorizer.vectorize(text = text) }
-            },
-        )
+        val metrics = EmbeddingComparison.evaluate(vectorizer = vectorizer)
 
-        // Once for the training corpus, once for the held-out set.
-        assertEquals(expected = 2, actual = batchedCalls)
+        // Once for the training corpus, once for the held-out set -- not once per record, which
+        // for a real embedding service would be a round trip apiece.
+        assertEquals(expected = 2, actual = vectorizer.batchCalls)
         assertEquals(expected = 40, actual = metrics.sampleCount)
     }
 

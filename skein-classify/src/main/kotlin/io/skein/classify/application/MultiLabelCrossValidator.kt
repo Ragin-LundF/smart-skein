@@ -7,6 +7,7 @@ import io.skein.classify.domain.MultiLabeledFeatures
 import io.skein.classify.domain.MultiLabeledText
 import io.skein.classify.spi.BatchLearner
 import io.skein.classify.spi.Vectorizer
+import io.skein.classify.spi.vectorizeAll
 
 /** Folds used unless the caller overrides them. */
 private const val DEFAULT_FOLDS = 5
@@ -83,21 +84,31 @@ class MultiLabelCrossValidator(
         threshold: Double,
     ): List<MultiLabelOutcome> {
         val vectorizer = vectorizerFactory(training)
-        val model = learnerFactory().fit(
-            observations = training.map { row -> featurize(row = row, vectorizer = vectorizer) },
-        )
+        val model = learnerFactory().fit(observations = featurize(rows = training, vectorizer = vectorizer))
         return evaluator.outcomes(
             classifier = model,
-            holdout = holdout.map { row -> featurize(row = row, vectorizer = vectorizer) },
+            holdout = featurize(rows = holdout, vectorizer = vectorizer),
             threshold = threshold,
         )
     }
 
-    private fun featurize(row: MultiLabeledText, vectorizer: Vectorizer): MultiLabeledFeatures {
-        return MultiLabeledFeatures(
-            features = vectorizer.vectorize(text = row.featureText),
-            labels = row.labels,
-            group = row.group,
-        )
+    /**
+     * Featurises a whole fold in one call.
+     *
+     * Deliberately not a per-row loop. Cross-validation featurises every row `folds` times over,
+     * so with an embedding vectorizer a loop here is one inference call — or one HTTP round trip —
+     * per row per fold. `vectorizeAll` collapses that to one call per fold for any
+     * [io.skein.classify.spi.BatchVectorizer], and falls back to the loop for feature hashing,
+     * where there is nothing to amortise.
+     */
+    private fun featurize(rows: List<MultiLabeledText>, vectorizer: Vectorizer): List<MultiLabeledFeatures> {
+        val vectors = vectorizer.vectorizeAll(texts = rows.map { row -> row.featureText })
+        return rows.indices.map { index ->
+            MultiLabeledFeatures(
+                features = vectors[index],
+                labels = rows[index].labels,
+                group = rows[index].group,
+            )
+        }
     }
 }

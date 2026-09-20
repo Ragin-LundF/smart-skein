@@ -1,6 +1,7 @@
 package io.skein.classify.spi
 
 import io.skein.classify.domain.FeatureVector
+import io.skein.classify.domain.VectorizerCanary
 import io.skein.classify.domain.VectorizerFingerprint
 
 /**
@@ -30,4 +31,22 @@ interface Vectorizer {
      * [VectorizerFingerprint] for why a mismatch must be fatal.
      */
     fun fingerprint(): VectorizerFingerprint
+
+    /**
+     * Fixed probe texts and the vectors this vectorizer currently produces for them, or `null` to
+     * record nothing.
+     *
+     * A [VectorizerFingerprint] states what a vectorizer *is*; a [VectorizerCanary] samples what it
+     * *does*. The two differ only when something outside the configuration can change the output —
+     * which is the situation an external embedding service is permanently in, and which nothing in
+     * its protocol reveals. Implementations whose output is fully determined by their configuration
+     * gain nothing from this and should leave it at the default.
+     *
+     * Called during
+     * [io.skein.classify.application.ModelStore.saveMultiLabel]; the result travels with the model
+     * and is re-checked on load. Returning `null`, the default, disables the check entirely.
+     */
+    fun canary(): VectorizerCanary? {
+        return null
+    }
 }

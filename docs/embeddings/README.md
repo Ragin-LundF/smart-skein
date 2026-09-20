@@ -58,8 +58,8 @@ classification happens. At 2 ms per record, embedding a million rows is **33 min
 run** — which is why batching and caching are built into both routes, and why deduplicating first
 (see [Scale](../classify/scale.md)) matters more here than anywhere else.
 
-The classifier itself gets *smaller*. A 384-dimension embedding across 237 labels is
-`384 × 237 × 4 bytes = 364 KB`, against 17 MB for a sparse n-gram model of the same taxonomy.
+The classifier itself gets *smaller*. A 384-dimension embedding across ~240 labels is
+`384 × 240 × 4 bytes ≈ 370 KB`, against 17 MB for a sparse n-gram model of the same taxonomy.
 Pruning stops being worth doing. The artifact that matters becomes the embedding model.
 
 ## The two routes
@@ -76,11 +76,11 @@ graph TD
 
     hash["HashingVectorizer<br/>skein-classify<br/><b>41 µs/record</b>"]
     onnx["OnnxEmbeddingVectorizer<br/>skein-classify-embedding-onnx<br/><b>0.1–3 ms/record</b>"]
-    http["HttpEmbeddingVectorizer<br/>examples<br/><b>network round trip</b>"]
+    http["HttpEmbeddingVectorizer<br/>skein-classify-embedding-http<br/><b>network round trip</b>"]
 
     hashNote["literal n-grams<br/>irreversible, keyed<br/>no model file"]
     onnxNote["semantic<br/>model bytes hashed<br/>runs in your JVM"]
-    httpNote["semantic<br/>identity is declared, not verified<br/>LM Studio · Ollama · OpenAI"]
+    httpNote["semantic<br/>declared identity, canary-verified<br/>LM Studio · Ollama · OpenAI"]
 
     fv["FeatureVector<br/><i>the learner sees only this</i>"]
 
@@ -94,17 +94,20 @@ graph TD
 
 | | **Route A — your own model, in-process** | **Route B — an external service** |
 |---|---|---|
-| Module | [`skein-classify-embedding-onnx`](../../skein-classify-embedding-onnx) (published) | `HttpEmbeddingVectorizer` in [`examples`](../../examples) (copy it) |
+| Module | [`skein-classify-embedding-onnx`](../../skein-classify-embedding-onnx) (published) | [`skein-classify-embedding-http`](../../skein-classify-embedding-http) (published) |
 | Guide | [onnx-local.md](onnx-local.md) | [external-service.md](external-service.md) |
 | Setup | Export the model once, ship the file | Start a server, point at a URL |
 | Runs | In your JVM, no network | Wherever the service runs |
-| **Model identity** | **The file's bytes are hashed** — a swapped model is refused | Declared by you, **not verifiable** |
+| **Model identity** | **The file's bytes are hashed** — a swapped model is refused | Declared by you; verifiable with a [vector canary](external-service.md#canary-the-vectors) |
 | Text leaves your process | No | Yes |
 | Latency | Inference only | Inference plus a round trip |
 | Changing models | Re-export, redeploy | Configuration change |
-| Dependencies | ONNX Runtime + tokenizer native binaries | JDK HTTP client |
+| Dependencies | ONNX Runtime + tokenizer native binaries | JDK HTTP client plus a JSON parser |
 
-**Take route A for anything you run in production.** The difference that matters is the fourth row.
+**Take route A for anything you run in production** where the choice is open. The difference
+that matters is the fourth row: a content hash makes a swapped model impossible to miss, while a
+canary detects one after the fact. Route B with a canary is a supported production path; route B
+without one is for experimentation.
 
 ## Why model identity is the whole game
 
@@ -138,7 +141,10 @@ sequenceDiagram
     You->>L: fit(observations)
     L-->>You: MultiLabelClassifier
     You->>S: saveMultiLabel(model, vectorizer)
-    note right of S: the vectorizer fingerprint<br/>is written into the file
+    S->>V: canary()
+    V->>M: embed each probe
+    M-->>V: reference vectors
+    note right of S: the fingerprint and the canary<br/>are written into the file
     end
 
     rect rgb(240, 253, 244)
@@ -148,12 +154,19 @@ sequenceDiagram
     alt fingerprints differ
         S-->>You: VectorizerMismatchException
     else fingerprints match
-        S-->>You: model
-        You->>V: vectorize(record)
+        S->>V: re-embed the stored probes
         V->>M: embed
-        M-->>V: dense vector
-        V-->>You: FeatureVector
-        You->>You: model.predict(features, threshold)
+        M-->>V: vectors now
+        alt drifted past the tolerance
+            S-->>You: VectorizerCanaryException
+        else unchanged
+            S-->>You: model
+            You->>V: vectorize(record)
+            V->>M: embed
+            M-->>V: dense vector
+            V-->>You: FeatureVector
+            You->>You: model.predict(features, threshold)
+        end
     end
     end
 ```
@@ -166,11 +179,17 @@ How much that fingerprint is worth depends on the route:
   changes the digest, and the load is refused. This is a real guarantee.
 - **Route B hashes what you declared** — the model name, a revision string you maintain, the input
   prefix, the width. Nothing in the embeddings protocol reveals which weights answered, so if the
-  service is updated and you do not bump `modelRevision`, the check passes and the model is quietly
-  wrong.
+  service is updated and you do not bump `modelRevision`, the fingerprint alone still matches.
 
-That asymmetry is the reason route A is the production recommendation and route B is the way to
-find out whether embeddings help you at all.
+That is what the **vector canary** is for. Fixed probe texts are embedded when the model is saved
+and re-embedded when it is loaded; if the service has changed its weights, the probes move and the
+load throws rather than scoring. It is the only check that looks at what a vectorizer *does*
+instead of what it declares, and it is what makes route B usable in production. See
+[Canary the vectors](external-service.md#canary-the-vectors) and
+[ADR 0002](../adr/0002-vector-canary.md).
+
+A canary detects a changed model; route A's content hash makes one impossible in the first place.
+That remaining asymmetry is why route A is still the recommendation where the choice is open.
 
 ## Two ways to underperform silently
 

@@ -5,19 +5,28 @@ vLLM, Text Embeddings Inference and the OpenAI API all speak the same request sh
 covers all of them.
 
 This is the fastest way to find out whether embeddings help you. Read
-[the identity limitation](#the-limitation-that-decides-production-use) before putting it in
-production.
+[the identity limitation](#the-limitation-that-decides-production-use) and
+[Canary the vectors](#canary-the-vectors) before putting it in production.
 
 ## What you get
 
-`HttpEmbeddingVectorizer` lives in [`examples`](../../examples/src/main/kotlin/io/skein/examples/embedding),
-not in a published module, because it is 120 lines over the JDK's HTTP client with no dependency
-worth shipping. Copy it into your codebase and adjust it — authentication headers, retries, a
-proxy — rather than consuming it as a library.
+[`skein-classify-embedding-http`](../../skein-classify-embedding-http), a published adapter over
+the JDK's HTTP client. Its only dependency beyond `skein-classify` is a JSON parser, which the
+protocol requires.
 
-It is covered by [tests against a real local HTTP server](../../examples/src/test/kotlin/io/skein/examples/embedding/HttpEmbeddingVectorizerTest.kt),
-so the wire format, batching, out-of-order responses and error handling are verified rather than
-assumed.
+```kotlin
+dependencies {
+    implementation(platform("io.github.ragin-lundf:skein-bom:<version>"))
+    implementation("io.github.ragin-lundf:skein-classify-embedding-http")
+}
+```
+
+The wire format, batching, out-of-order responses, width validation and error handling are covered
+by [tests against a real local HTTP server](../../skein-classify-embedding-http/src/test/kotlin/io/skein/classify/embedding/http/infrastructure/HttpEmbeddingVectorizerTest.kt).
+
+The module owns the **protocol**. Retries, backoff, proxies and connection pooling are yours:
+implement `EmbeddingTransport`, or pass your own `HttpClient` to `JdkHttpEmbeddingTransport`. There
+is no policy here that would suit a local LM Studio and a rate-limited hosted API equally.
 
 ## Setting up LM Studio
 
@@ -52,15 +61,20 @@ else is identical.
 
 ### The OpenAI API instead
 
-Set `baseUrl = "https://api.openai.com/v1"` and `model = "text-embedding-3-small"`, and add an
-`Authorization: Bearer …` header to the request builder in `HttpEmbeddingVectorizer`. Be deliberate
-about this one: every record you classify leaves your infrastructure.
+Set `baseUrl = "https://api.openai.com/v1"`, `model = "text-embedding-3-small"` and
+`headers = mapOf("Authorization" to "Bearer $token")`. Be deliberate about this one: every record
+you classify leaves your infrastructure.
+
+Header values are kept out of the fingerprint, so rotating a token does not invalidate a trained
+model, and they are redacted from `EmbeddingServiceConfig.toString()` so a bearer token does not
+reach your logs.
 
 ## Configure it
 
 ```kotlin
-import io.skein.examples.embedding.EmbeddingServiceConfig
-import io.skein.examples.embedding.HttpEmbeddingVectorizer
+import io.skein.classify.embedding.http.domain.EmbeddingProbes
+import io.skein.classify.embedding.http.domain.EmbeddingServiceConfig
+import io.skein.classify.embedding.http.infrastructure.HttpEmbeddingVectorizer
 
 val config = EmbeddingServiceConfig(
     baseUrl = "http://localhost:1234/v1",
@@ -69,17 +83,21 @@ val config = EmbeddingServiceConfig(
     inputPrefix = "passage: ",
     dimension = 384,
     batchSize = 32,
+    canaryProbes = EmbeddingProbes.DEFAULT,
 )
 
 val vectorizer = HttpEmbeddingVectorizer(config = config)
 check(vectorizer.isReachable()) { "no embedding service at ${config.embeddingsUrl()}" }
 ```
 
-Four fields deserve attention:
+Five fields deserve attention:
 
-- **`modelRevision`** is a label *you* maintain for the exact weights behind `model`. It is the only
-  record of which weights produced a vector — see below. Bump it whenever you change or update the
-  served model.
+- **`modelRevision`** is a label *you* maintain for the exact weights behind `model`. It is a
+  declaration, not a verification — see below. Bump it whenever you change or update the served
+  model.
+- **`canaryProbes`** is the part that actually verifies. Leave it empty and nothing changes from
+  earlier releases; set it and a model changed on the server stops the next load. See
+  [Canary the vectors](#canary-the-vectors).
 - **`inputPrefix`** must match the model family. E5 needs `passage: ` for classification. Most
   others need `""`.
 - **`dimension`** can be omitted and probed from the first response, but setting it turns a model
@@ -157,24 +175,75 @@ So this sequence passes every check and produces wrong labels:
 
 Three ways to live with it, in order of strength:
 
-1. **Use [route A](onnx-local.md) in production.** The model file's bytes are hashed, so this cannot
-   happen. Keep route B for experimentation.
-2. **Pin the service.** Run a fixed model version in a container you control, and treat changing it
-   as a deployment that includes bumping `modelRevision` and retraining.
-3. **Canary the vectors.** Keep a handful of fixed probe texts with their embeddings from training
-   time, re-embed them at startup, and fail if they have moved beyond a tolerance. Roughly twenty
-   lines, and it converts a silent failure into a loud one.
+1. **Use [route A](onnx-local.md) in production** where the choice is open. The model file's bytes
+   are hashed, so a swap is impossible to miss rather than merely detectable.
+2. **Canary the vectors.** Set `canaryProbes` and the sequence above fails at step 4 instead of
+   succeeding. This is what makes route B usable in production; it is covered below.
+3. **Pin the service.** Run a fixed model version in a container you control, and treat changing it
+   as a deployment that includes bumping `modelRevision` and retraining. Good practice, but it is a
+   process, and processes are forgotten.
 
-The base URL is deliberately **not** part of the fingerprint: the same model served from another
-host must keep its identity, or moving a service between machines would invalidate every trained
-model for no reason.
+The base URL and the request headers are deliberately **not** part of the fingerprint: the same
+model served from another host, or reached with a rotated token, must keep its identity, or moving
+a service between machines would invalidate every trained model for no reason.
+
+## Canary the vectors
+
+Fixed probe texts, embedded when the model is saved and re-embedded when it is loaded. If they have
+moved, the load throws `VectorizerCanaryException` instead of scoring.
+
+```kotlin
+val config = EmbeddingServiceConfig(
+    // ... as above ...
+    canaryProbes = EmbeddingProbes.DEFAULT,   // or your own
+    canaryTolerance = 0.01,                   // relative L2; the default
+)
+```
+
+That is the whole change. `saveMultiLabel` captures the references, and `loadMultiLabel` checks
+them. A model saved without probes behaves exactly as it always did.
+
+### What it catches, and what it does not
+
+| Change on the server | Caught? |
+|---|---|
+| A different model loaded under the same name | Yes |
+| The same model requantised, `fp16` → `q8_0` | Yes — and it should be; for a classifier trained on its vectors that is a different model |
+| The service switched to L2-normalising its output | Yes. This is why drift is relative L2 and not cosine distance: normalising rescales every vector without rotating it, so cosine would see nothing while your linear classifier breaks |
+| A fine-tune of the same base model | Yes |
+| Different backend, CPU → Metal → CUDA | Usually not. Legitimate numerical noise; widen `canaryTolerance` to about `0.05` if you deliberately move between backends |
+| Batch-size and threading differences | No. Accumulation order moves a vector by about `1e-5`, a thousandth of the default tolerance |
+
+The probes are embedded **one per request**, never batched, so batch composition cannot contribute
+drift of its own.
+
+### Three things to know before enabling it
+
+- **Loading a model now performs network I/O.** One round trip per probe, and it can fail because
+  the service is unreachable — a timeout propagates as itself, not as
+  `VectorizerCanaryException`, because "the service is down" and "your model changed" call for
+  different responses. `loadMultiLabel(path, vectorizer, verifyCanary = false)` opts out.
+- **Probe texts are stored in the model file in clear text.** They are the one thing in a `.skein`
+  file that is not an irreversible hash. Use short synthetic sentences written for the purpose,
+  never records from your corpus. `EmbeddingProbes.DEFAULT` is three such sentences, in three
+  languages, because a probe set confined to one language cannot see a revision that shifts
+  another.
+- **`saveMultiLabel` re-checks before writing.** A canary taken before training proves nothing
+  about a model swapped *during* a long run — half the corpus would be embedded by one model and
+  half by another, and a stale reference would still match at load. Saving therefore re-embeds the
+  probes and refuses to write if they have already moved.
+
+If the canary fires and the change was deliberate, retrain and save a fresh one. Do not widen the
+tolerance: that is turning off the smoke alarm.
+
+Recorded in [ADR 0002](../adr/0002-vector-canary.md).
 
 ## Other operational notes
 
 | Concern | What to do |
 |---|---|
 | Service down mid-run | `vectorizeAll` throws. Embed to a file first for long runs, then train from it. |
-| Rate limits | Lower `batchSize` and add backoff in the client you copied. |
+| Rate limits | Lower `batchSize`, and add backoff in your own `EmbeddingTransport`. |
 | Timeouts | `timeoutSeconds` defaults to 120. Large batches on a loaded CPU can exceed a shorter one. |
 | Data residency | Every record's text leaves your process. For a hosted API it leaves your infrastructure. If that is a problem, route A is the answer. |
 | Cost | A hosted API charges per token. Deduplicate first — see [Scale](../classify/scale.md). |

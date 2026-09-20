@@ -45,10 +45,10 @@ result.ratio()         // report this on your data
 ```
 
 Once references are masked away, an enormous share of a real corpus is literally the same record.
-**Measured: 400,000 documents collapsed to 21,420** — nineteen to one, with the vocabulary
+**Measured: 400,000 documents collapsed to ~21,000** — nineteen to one, with the vocabulary
 essentially unchanged.
 
-That particular ratio is inflated by the probe drawing from only 7,319 base documents. Expect a
+That particular ratio is inflated by the probe drawing from only ~7,000 base documents. Expect a
 smaller but still large factor, and **measure it** rather than assuming.
 
 Rows are keyed on masked text **together with the label set**, never text alone. Two rows with
@@ -70,7 +70,7 @@ is incurred *before* the floor is reached.
 
 Hashing bounds the model; it does not minimise it. Pick the width from measured data:
 
-| Width | Model size, 237 labels, 8% kept |
+| Width | Model size, ~240 labels, 8% kept |
 |---|---|
 | `2^18` (262,144) | 37 MB |
 | `2^20` (1,048,576) | 151 MB |
@@ -108,8 +108,8 @@ parallelism multiplies it:
 
 | Features | Per worker (history 5) | × 18 workers |
 |---|---|---|
-| 102,205 | 12 MB | 225 MB |
-| 369,529 | 45 MB | 812 MB |
+| ~100,000 | 12 MB | 225 MB |
+| ~370,000 | 45 MB | 812 MB |
 | 4,194,304 | 512 MB | 9.0 GB |
 
 `TrainingParallelism` sizes the pool from available heap and feature count, not core count.
@@ -134,10 +134,10 @@ to avoid:
 
 | Documents | Features | Vocab fit | Matrix build | Heap |
 |---|---|---|---|---|
-| 7,319 | 118,370 | 0.4 s | 0.2 s | 49 MB |
-| 25,000 | 297,236 | 1.4 s | 0.9 s | 157 MB |
-| 100,000 | 369,524 | 5.5 s | 3.1 s | 448 MB |
-| 400,000 | 369,529 | 20.7 s | 12.3 s | 1,412 MB |
+| ~7,000 | ~118,000 | 0.4 s | 0.2 s | 49 MB |
+| 25,000 | ~297,000 | 1.4 s | 0.9 s | 157 MB |
+| 100,000 | ~370,000 | 5.5 s | 3.1 s | 448 MB |
+| 400,000 | ~370,000 | 20.7 s | 12.3 s | 1,412 MB |
 | 1,000,000 | — | **did not complete** | — | **11.6 GB and climbing** |
 
 Clean linear scaling to 400,000, then a wall — caused entirely by vocabulary fitting. With hashing

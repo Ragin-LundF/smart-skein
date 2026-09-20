@@ -7,8 +7,7 @@ Runnable demonstrations, one per capability. Not published, and nothing else dep
 ./gradlew :examples:run --args="recipes"      # run one
 ```
 
-Everything here is meant to be read as much as run. Several files are written to be copied into your
-own codebase — `HttpEmbeddingVectorizer` in particular.
+Everything here is meant to be read as much as run.
 
 ## Start with these
 
@@ -78,9 +77,14 @@ this is the only thing that measures whether it generalises past them.
 
 | File | What it is |
 |---|---|
-| [`HttpEmbeddingVectorizer`](src/main/kotlin/io/skein/examples/embedding/HttpEmbeddingVectorizer.kt) | A `Vectorizer` over any OpenAI-compatible embeddings endpoint. ~120 lines on the JDK HTTP client, [tested against a real server](src/test/kotlin/io/skein/examples/embedding/HttpEmbeddingVectorizerTest.kt). Copy it and add your auth headers |
-| [`EmbeddingServiceConfig`](src/main/kotlin/io/skein/examples/embedding/EmbeddingServiceConfig.kt) | The settings that have to be pinned for a remote model to be trustworthy |
 | [`RecipeRuleset`](src/main/kotlin/io/skein/examples/recipes/RecipeRuleset.kt) | A rule interpreter in a dozen lines, making the point that the library never sees your rule format |
+| [`EmbeddingComparison`](src/main/kotlin/io/skein/examples/embedding/EmbeddingComparison.kt) | Scoring a hashing baseline against an embedding vectorizer on the same held-out set — the measurement that decides whether embeddings are worth it for you |
+
+`HttpEmbeddingVectorizer` used to live here as a copy-me file. It is now
+[`skein-classify-embedding-http`](../skein-classify-embedding-http), a published module, because a
+supported route B needs a supported artifact. The parts people actually changed in their copies are
+configuration now: auth headers go in `EmbeddingServiceConfig.headers`, and anything about
+retries, proxies or pooling belongs in your own `EmbeddingTransport`.
 
 ## Documentation
 

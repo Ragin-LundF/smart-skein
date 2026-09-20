@@ -6,6 +6,10 @@ silently producing wrong labels.
 
 This is the route to take for anything you run in production.
 
+> A [vector canary](external-service.md#canary-the-vectors) works here too — the mechanism is on
+> the `Vectorizer` port, not on either adapter — but it adds nothing this route does not already
+> have. Hashing the model file's bytes makes a swap impossible to miss; a canary only detects one.
+
 ## 1. Add the module
 
 ```kotlin
@@ -121,7 +125,7 @@ ModelStore.saveMultiLabel(
 )
 ```
 
-`keepFraction = 1.0` because pruning is pointless on a dense model: 384 × 237 × 4 bytes is 364 KB,
+`keepFraction = 1.0` because pruning is pointless on a dense model: 384 × ~240 × 4 bytes is ~370 KB,
 and every weight carries signal. Pruning exists for sparse n-gram matrices two orders of magnitude
 larger.
 

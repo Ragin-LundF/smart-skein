@@ -19,6 +19,7 @@ include("skein-classify")
 include("skein-extract")
 include("skein-store-postgres")
 include("skein-classify-embedding-onnx")
+include("skein-classify-embedding-http")
 include("skein-cli")
 include("examples")
 

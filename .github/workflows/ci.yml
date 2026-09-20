@@ -3,7 +3,10 @@ name: CI
 # Build, test and static-analysis gate (Section 7.2 of the implementation plan).
 # Runs on every push to main and on pull requests. `./gradlew build` compiles all modules,
 # runs the unit + property tests and the Testcontainers integration tests (the runner provides
-# Docker), and runs Detekt (wired as a finalizer of `assemble`).
+# Docker), runs Detekt (wired as a finalizer of `assemble`), and checks every published module's
+# ABI against its committed dump under `<module>/api/` (`checkKotlinAbi`, wired into `check` by
+# skein.api-conventions). An intentional ABI change is recorded with `./gradlew updateKotlinAbi`
+# and committed with the change that caused it.
 
 on:
   push:

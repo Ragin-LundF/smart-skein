@@ -1,0 +1,74 @@
+public final class io/skein/store/postgres/config/JdbcConnectionConfig {
+	public static final field Companion Lio/skein/store/postgres/config/JdbcConnectionConfig$Companion;
+	public static final field DEFAULT_MAX_POOL_SIZE I
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()I
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)Lio/skein/store/postgres/config/JdbcConnectionConfig;
+	public static synthetic fun copy$default (Lio/skein/store/postgres/config/JdbcConnectionConfig;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lio/skein/store/postgres/config/JdbcConnectionConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getJdbcUrl ()Ljava/lang/String;
+	public final fun getMaximumPoolSize ()I
+	public final fun getPassword ()Ljava/lang/String;
+	public final fun getUsername ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/skein/store/postgres/config/JdbcConnectionConfig$Companion {
+}
+
+public final class io/skein/store/postgres/infrastructure/AesGcmEncryption : io/skein/store/postgres/spi/FeatureEncryption {
+	public static final field AES_256_KEY_BYTES I
+	public static final field IV_BYTES I
+	public static final field TAG_BITS I
+	public static final field TRANSFORMATION Ljava/lang/String;
+	public fun <init> ([B)V
+	public fun decrypt ([B)[B
+	public fun encrypt ([B)[B
+}
+
+public final class io/skein/store/postgres/infrastructure/FeatureVectorCodec {
+	public fun <init> ()V
+	public final fun decode ([B)Lio/skein/classify/domain/FeatureVector;
+	public final fun encode (Lio/skein/classify/domain/FeatureVector;)[B
+}
+
+public final class io/skein/store/postgres/infrastructure/NoEncryption : io/skein/store/postgres/spi/FeatureEncryption {
+	public fun <init> ()V
+	public fun decrypt ([B)[B
+	public fun encrypt ([B)[B
+}
+
+public final class io/skein/store/postgres/infrastructure/PostgresFeatureStore : io/skein/classify/spi/FeatureStore {
+	public static final field INSERT_SQL Ljava/lang/String;
+	public static final field TABLE_NAME Ljava/lang/String;
+	public fun <init> (Ljavax/sql/DataSource;Lio/skein/store/postgres/infrastructure/FeatureVectorCodec;Lio/skein/store/postgres/spi/FeatureEncryption;)V
+	public synthetic fun <init> (Ljavax/sql/DataSource;Lio/skein/store/postgres/infrastructure/FeatureVectorCodec;Lio/skein/store/postgres/spi/FeatureEncryption;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun add (Lio/skein/classify/domain/LabeledFeatures;)V
+	public fun addAll (Ljava/util/Collection;)V
+	public fun all ()Ljava/util/List;
+	public fun clear ()V
+	public fun labels ()Ljava/util/Set;
+	public fun size ()I
+}
+
+public final class io/skein/store/postgres/infrastructure/SchemaMigrator {
+	public static final field CHANGELOG Ljava/lang/String;
+	public fun <init> (Ljavax/sql/DataSource;)V
+	public final fun migrate ()V
+}
+
+public final class io/skein/store/postgres/infrastructure/TomcatJdbcDataSourceFactory {
+	public static final field INSTANCE Lio/skein/store/postgres/infrastructure/TomcatJdbcDataSourceFactory;
+	public final fun create (Lio/skein/store/postgres/config/JdbcConnectionConfig;)Lorg/apache/tomcat/jdbc/pool/DataSource;
+}
+
+public abstract interface class io/skein/store/postgres/spi/FeatureEncryption {
+	public abstract fun decrypt ([B)[B
+	public abstract fun encrypt ([B)[B
+}
+

@@ -4,11 +4,11 @@ graph TD
 
     hash["HashingVectorizer<br/>skein-classify<br/><b>41 µs/record</b>"]
     onnx["OnnxEmbeddingVectorizer<br/>skein-classify-embedding-onnx<br/><b>0.1–3 ms/record</b>"]
-    http["HttpEmbeddingVectorizer<br/>examples<br/><b>network round trip</b>"]
+    http["HttpEmbeddingVectorizer<br/>skein-classify-embedding-http<br/><b>network round trip</b>"]
 
     hashNote["literal n-grams<br/>irreversible, keyed<br/>no model file"]
     onnxNote["semantic<br/>model bytes hashed<br/>runs in your JVM"]
-    httpNote["semantic<br/>identity is declared, not verified<br/>LM Studio · Ollama · OpenAI"]
+    httpNote["semantic<br/>declared identity, canary-verified<br/>LM Studio · Ollama · OpenAI"]
 
     fv["FeatureVector<br/><i>the learner sees only this</i>"]
 
