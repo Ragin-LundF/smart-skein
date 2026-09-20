@@ -1,0 +1,20 @@
+graph LR
+    subgraph module["Every module uses the same four packages"]
+        direction LR
+        domain["domain<br/><i>values · invariants<br/>pure computation</i>"]
+        spi["spi<br/><i>ports this module<br/>needs satisfied</i>"]
+        application["application<br/><i>services orchestrating<br/>a use case</i>"]
+        infrastructure["infrastructure<br/><i>adapters: algorithms,<br/>file formats, I/O</i>"]
+    end
+
+    spi -->|may use| domain
+    application -->|may use| domain
+    application -->|may use| spi
+    infrastructure -->|may use| domain
+    infrastructure -->|may use| spi
+    infrastructure -->|may use| application
+
+    classDef inner fill:#1f2937,stroke:#111827,color:#f9fafb
+    classDef outer fill:#e5e7eb,stroke:#6b7280,color:#111827
+    class domain,spi inner
+    class application,infrastructure outer

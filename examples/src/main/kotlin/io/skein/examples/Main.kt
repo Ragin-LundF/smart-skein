@@ -5,6 +5,8 @@ import io.skein.examples.cli.runCliDemoExample
 import io.skein.examples.cli.runCliToolDemoExample
 import io.skein.examples.clustering.runTemplateClustererExample
 import io.skein.examples.crf.runCrfTaggerExample
+import io.skein.examples.embedding.runExternalEmbeddingExample
+import io.skein.examples.embedding.runLocalOnnxEmbeddingExample
 import io.skein.examples.explain.runExplainAndCalibrateExample
 import io.skein.examples.importing.runRecordImportExample
 import io.skein.examples.logwatch.logWatchMain
@@ -46,6 +48,10 @@ private val USAGE = """
       recipes           Multi-label tagging distilled from a keyword ruleset: grouped vs ungrouped
                         cross-validation, a threshold sweep, and a hand-written held-out set that
                         shows where the model generalises past the rules and where it does not.
+      embedding-onnx    Route A: an embedding model run in-process through ONNX Runtime.
+                        Needs an exported model; prints the export command if absent.
+      embedding-service Route B: embeddings from LM Studio or any OpenAI-compatible server.
+                        Prints the setup if no server is reachable.
       explain           Calibrate confidences, abstain on low confidence, and explain a prediction.
       clidemo           Schema inference + active learning loop with equivalent CLI command hints.
       tokenization      WHITESPACE vs PUNCTUATION_AWARE mode comparison.
@@ -78,6 +84,8 @@ private val DISPATCH: Map<String, () -> Unit> = mapOf(
     "activelearning" to ::runActiveLearningExample,
     "crf" to ::runCrfTaggerExample,
     "recipes" to ::runRecipeTaggingExample,
+    "embedding-onnx" to ::runLocalOnnxEmbeddingExample,
+    "embedding-service" to ::runExternalEmbeddingExample,
     "explain" to ::runExplainAndCalibrateExample,
     "clidemo" to ::runCliDemoExample,
     "tokenization" to ::runTokenizationModesExample,

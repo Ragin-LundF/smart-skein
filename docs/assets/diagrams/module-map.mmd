@@ -1,0 +1,21 @@
+graph TD
+    text["skein-text<br/><i>normalize · repair · tokenize</i>"]
+    classify["skein-classify<br/><i>record → label(s)</i>"]
+    extract["skein-extract<br/><i>text → structured values</i>"]
+    postgres["skein-store-postgres<br/><i>FeatureStore on PostgreSQL</i>"]
+    onnx["skein-classify-embedding-onnx<br/><i>Vectorizer via ONNX model</i>"]
+    cli["skein-cli<br/><i>label · predict · evaluate</i>"]
+    bom["skein-bom<br/><i>version alignment</i>"]
+
+    text --> classify
+    text --> extract
+    classify --> postgres
+    classify --> onnx
+    classify --> cli
+
+    classDef core fill:#1f2937,stroke:#111827,color:#f9fafb
+    classDef adapter fill:#e5e7eb,stroke:#6b7280,color:#111827
+    classDef meta fill:#fef3c7,stroke:#d97706,color:#78350f
+    class text,classify,extract core
+    class postgres,onnx,cli adapter
+    class bom meta

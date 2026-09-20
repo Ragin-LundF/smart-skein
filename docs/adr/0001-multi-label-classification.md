@@ -108,6 +108,7 @@ unpruned float32 matrix at a measured cost of a handful of label decisions per m
 asymmetry worth knowing about — it is rejected by name rather than silently substituted. The `.skein`
 format has two payload shapes, and a v2-only reader cannot read a v3 file.
 
-The `Vectorizer` port was what made `skein-classify-embedding-onnx` possible without
-touching this module: it is a separate published artifact, so a consumer using feature hashing never
-inherits an ONNX Runtime binary, and `skein-classify` gained no dependency at all.
+**Knock-on.** The `Vectorizer` port introduced here is what lets
+[`skein-classify-embedding-onnx`](../embeddings/README.md) supply semantic features without this
+module changing. That adapter is a separate published artifact, so a consumer using feature hashing
+inherits no ONNX Runtime binary, and `skein-classify` carries no dependency on it.

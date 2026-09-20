@@ -61,6 +61,21 @@ All notable changes to this project will be documented in this file.
   refused at load. Dense vectors are expressed through the existing sparse `FeatureVector`, so the
   learner, the objective and the scoring loop are unchanged. The ONNX Runtime and tokenizer native
   binaries live only in this module — a consumer using feature hashing inherits neither.
+- **`HttpEmbeddingVectorizer`** (`examples`) — a `Vectorizer` over any OpenAI-compatible
+  `/embeddings` endpoint, so LM Studio, Ollama, llama.cpp, vLLM and the OpenAI API all work
+  unchanged. Built on the JDK HTTP client with no dependency worth shipping, meant to be copied
+  rather than consumed, and covered by tests against a real local HTTP server. Two runnable
+  examples, `embedding-service` and `embedding-onnx`, train the recipe tagger on embeddings and
+  score it against the hashing baseline; both print setup instructions when the service or model is
+  absent.
+- **Restructured documentation** — every module carries a short `README.md` stating what it is and
+  when to use it, linking into depth under [`docs/`](docs). New: an
+  [index](docs/README.md), [getting started](docs/getting-started.md),
+  [architecture](docs/architecture.md) with module, layer and pipeline diagrams, seven
+  [classification](docs/classify/README.md) pages, and four
+  [embedding](docs/embeddings/README.md) pages covering both integration routes, LM Studio setup
+  and model selection. Diagrams are Mermaid with committed SVG exports and a render script in
+  [`docs/assets/diagrams`](docs/assets/diagrams).
 - **[`docs/bring-your-own-data.md`](docs/bring-your-own-data.md)** — six steps from your records to a
   model, including the single question that decides single- versus multi-label.
 

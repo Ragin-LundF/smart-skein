@@ -1,536 +1,87 @@
 # skein-classify
 
-Record → label classification: **typo-tolerant, self-training, privacy-preserving.** Assigns one
-label to a whole record (a bank transaction, a support ticket, a document) using classical
-statistical ML — no neural networks, no GPU, no external services. Depends on `skein-text`.
+Assigning labels to a whole record — one label, or several when labels co-occur.
 
-> **Audience:** developers integrating classification, and data scientists who need to know exactly
-> how features are built, which model is doing the work, how to **train / retrain / tune** it, and
-> how to keep a human in the loop via active learning.
+Classical statistical machine learning on the CPU: no GPU, no neural network, no external service.
+Features are irreversible keyed hashes by default, so personal data never enters a model in clear
+text. Depends on `skein-text`.
 
-## Why classical ML here
+> **Audience:** developers integrating classification, and data scientists who need to know how
+> features are built, which model is doing the work, how to train and tune it, and how to keep a
+> human in the loop.
 
-- **Incremental & online** — every model learns one record at a time; you can `learn` forever, no
-  full retrain needed (though batch `retrain` is available for SGD models).
-- **Privacy by construction** — text becomes an irreversible, keyed feature hash before any model
-  sees it; PII fields never enter the feature text at all.
-- **Cheap & explainable** — runs on a CPU; predictions come with ranked alternatives *and* an exact
-  additive per-feature decomposition of the score (see "Why this label").
-- **Measurable** — holdout and k-fold evaluation with per-class metrics, a confusion matrix and
-  reliability bins, so "is this model good enough" is a question you can answer.
+## Use it when
+
+- Records need a category: a ticket, a transaction, a document, a log line.
+- Wording is messy — typos, abbreviations, inconsistent formatting.
+- Labels must be auditable: every prediction decomposes exactly into the features that drove it.
+- Personal data must not end up in a model file.
+- You are replacing a rule engine and want the model to learn from the rules' output.
+
+## The one decision
+
+> **Can two labels be true of the same record at the same time?**
+
+**No** → `Classifier`. A softmax makes labels compete, which is correct for a mutually exclusive
+choice, and it learns one record at a time so incremental and active learning work.
+
+**Yes** → `MultiLabelClassifier` with `BatchLearner`. Independent per-label decisions, so several
+can fire and a record matching nothing comes back empty.
+
+Forcing co-occurring labels through a softmax suppresses the second label by construction.
+
+## At a glance
+
+```kotlin
+import io.skein.classify.application.HashingVectorizer
+import io.skein.classify.domain.HashingConfig
+import io.skein.classify.domain.Label
+import io.skein.classify.domain.MultiLabeledFeatures
+import io.skein.classify.infrastructure.LbfgsMultiLabelLearner
+
+val vectorizer = HashingVectorizer(config = HashingConfig(key0 = secret0, key1 = secret1))
+
+val model = LbfgsMultiLabelLearner(featureCount = vectorizer.dimension()).fit(
+    observations = corpus.map { row ->
+        MultiLabeledFeatures(
+            features = vectorizer.vectorize(text = row.text),
+            labels = row.tags.map { tag -> Label(value = tag) }.toSet(),
+        )
+    },
+)
+
+model.predict(features = vectorizer.vectorize(text = "login fails after update"), threshold = 0.5)
+    .labels()   // e.g. [BUG, AUTHENTICATION]
+```
+
+`key0` and `key1` have no default. The hashing key is what makes feature indices irreversible, and
+choosing it is a privacy decision the library will not make for you.
 
 ## Installation
 
 ```kotlin
 dependencies {
-    implementation("io.skein:skein-classify:<version>")     // align via skein-bom
+    implementation(platform("io.github.ragin-lundf:skein-bom:<version>"))
+    implementation("io.github.ragin-lundf:skein-classify")
 }
 ```
 
----
+## Documentation
 
-## The pipeline at a glance
-
-```
-Record (field map)
-   │  RecordMapper        — drops PII + label, joins PUBLIC fields → featureText
-   ▼
-featureText (String)
-   │  HashingVectorizer   — char + word n-grams → SipHash → sparse FeatureVector
-   ▼
-FeatureVector
-   │  Classifier          — NaiveBayes (default) or LogisticRegressionSGD
-   ▼
-Prediction (label, confidence, ranked alternatives)
-```
-
-`ClassificationService` ties all of this together. **One service = one schema = one model.**
-
----
-
-## 1. Define a schema
-
-A schema declares your fields and their sensitivity. It needs **exactly one `label`** (the target).
-
-```kotlin
-val schema = Schema.define {
-    text("purpose")                 // free text → contributes to features
-    categorical("counterparty")     // low-cardinality category → features
-    numeric("amount")               // numeric → features (and validated as numeric)
-    identifier("iban")              // identifier → defaults to PII, excluded from features
-    label("category")               // the target label (exactly one required)
-}
-```
-
-### Field types (`FieldSpec`)
-
-| Builder | Type | Default sensitivity | In feature text? |
-|---------|------|---------------------|------------------|
-| `text(name)` | `TextField` | `PUBLIC` | yes |
-| `categorical(name)` | `CategoricalField` | `PUBLIC` | yes |
-| `numeric(name)` | `NumericField` | `PUBLIC` | yes (also validated numeric) |
-| `identifier(name)` | `IdentifierField` | **`PII`** | **no** (PII excluded) |
-| `label(name)` | `LabelField` | `PUBLIC` (fixed) | no (it's the target) |
-
-Every builder except `label` takes an optional `sensitivity` override:
-
-```kotlin
-text("notes", sensitivity = SensitivityEnum.PII)        // force a text field out of features
-identifier("public_ref", sensitivity = SensitivityEnum.PUBLIC)  // let an id into features
-```
-
-> **Privacy rule:** a field reaches the feature text **only** if it is not the label and its
-> sensitivity is not `PII`. `RecordMapper` enforces this — PII never becomes a feature.
-
-### Don't have a schema? Infer one
-
-`SchemaInference` proposes a schema from sample records using simple heuristics:
-
-```kotlin
-val schema = SchemaInference(maxCategoricalCardinality = 20).infer(records, labelField = "category")
-```
-
-Per non-label field, looking at non-null sample values:
-
-1. all parse as numbers → `NumericField`
-2. values repeat **and** distinct count ≤ `maxCategoricalCardinality` (default 20) → `CategoricalField`
-3. all values distinct **and** look like codes (alphanumeric, ≥4 chars, contains a digit) → `IdentifierField` (PII)
-4. otherwise → `TextField`
-
-Always **review an inferred schema** — heuristics guess; you know your domain.
-
-### Validate records — `SchemaValidator`
-
-```kotlin
-val result = SchemaValidator(schema).validate(record)
-result.isValid()    // false if there are errors
-result.errors       // e.g. "label is missing", "amount is not numeric"  → record rejected
-result.warnings     // e.g. "field 'memo' not in schema"                 → record still accepted
-```
-
----
-
-## 2. Feature hashing — `HashingVectorizer` + `HashingConfig`
-
-Text becomes a sparse `FeatureVector` of **character n-grams (3–5)** and **word n-grams (1–2)**, each
-hashed with **SipHash-2-4** (a keyed PRF) into a fixed feature space. The mapping is order-free and
-irreversible in aggregate — you cannot reconstruct the source text from the vector.
-
-```kotlin
-val config = HashingConfig(
-    key0 = 0x1234_5678L,   // REQUIRED — the keyed-hash secret (no default; it's a privacy choice)
-    key1 = 0x9ABC_DEF0L,   // REQUIRED
-    // numFeatures   = 262_144 (2^18)   — feature space size
-    // charNgramMin  = 3, charNgramMax = 5
-    // wordNgramMin  = 1, wordNgramMax = 2
-)
-val vectorizer = HashingVectorizer(config = config)
-val features = vectorizer.vectorize("aig-life 67,89 insurance premium")
-features.nonZeroCount()
-```
-
-> ⚠️ **`key0`/`key1` have no default — you must choose them.** This is deliberate:
-> - **Fixed secret key** → feature indices are stable across runs/processes → required to **persist
->   or share a trained model**. Keep the key secret; it's what makes the hash a keyed PRF.
-> - `HashingConfig.randomKey()` → a fresh `SecureRandom` key per process. Convenient for one-shot
->   demos, but a model trained under one random key **cannot** be reused under another.
-
-### Tuning knobs (data scientists)
-
-| Field | Default | Effect of raising |
-|-------|---------|-------------------|
-| `numFeatures` | `2^18 = 262 144` | fewer hash collisions, more memory/weights |
-| `charNgramMin / Max` | `3 / 5` | captures longer subword patterns; more features (typo robustness comes largely from char n-grams) |
-| `wordNgramMin / Max` | `1 / 2` | bigrams capture short phrases; more features |
-
-Char n-grams are what make classification **typo-tolerant**: `"insurance"` and `"insurnce"` still
-share most of their 3–5-char grams.
-
----
-
-## 3. Train and classify — `ClassificationService`
-
-```kotlin
-val engine = ClassificationService(
-    schema = schema,
-    privacyMode = PrivacyModeEnum.FEATURES_ONLY,    // REQUIRED (no default)
-    hashingConfig = config,                          // REQUIRED
-    // classifier   = NaiveBayesClassifier()         — default model
-    // featureStore = InMemoryFeatureStore()         — default storage
-)
-
-// --- TRAIN ---
-engine.learn(record)                                 // one labeled record
-engine.learnAll(trainingRecords)                     // many
-
-// --- PREDICT ---
-val prediction = engine.classify(unlabeledRecord)
-prediction.label          // winning Label
-prediction.confidence     // probability of the winner, 0.0..1.0
-prediction.alternatives   // List<ScoredLabel> ranked high→low (includes the winner)
-
-// --- CORRECT (online feedback) ---
-engine.feedback(record, correctLabel = Label("housing"))   // learns the record under the right label
-
-// --- INSPECT ---
-val m = engine.metrics()
-m.totalObservations       // Int
-m.perLabelCounts          // Map<Label, Int> — class balance
-
-// --- RESET ---
-engine.forget()           // discards model AND stored observations
-```
-
-### Records are just maps
-
-```kotlin
-val record = Record(values = mapOf(
-    "purpose" to "AIG-Life 67,89 insurance premium",
-    "iban"    to "DE00...",          // PII — present, but excluded from features
-    "category" to "insurance",        // the label (omit it for prediction)
-))
-```
-
-For prediction the label field can be absent. For `learn` it must be present (else
-`IllegalArgumentException`).
-
-### `PrivacyModeEnum` (required, no default)
-
-| Mode | Meaning |
-|------|---------|
-| `FEATURES_ONLY` | Only the irreversible hashed features are stored. |
-| `ENCRYPTED_SOURCE` | The original record is also retained, **encrypted at rest**. Requires an encryption-capable store — see `skein-store-postgres`. With the default `InMemoryFeatureStore`, both modes behave identically (features only). |
-
----
-
-## 4. Choosing and tuning the model
-
-Two classifiers ship, both **incremental** and sharing the same softmax probability calibration
-(`PredictionFactory`, numerically stable). Both implement the `Classifier` SPI, so you can plug in
-your own.
-
-### Naive Bayes (default) — `NaiveBayesClassifier`
-
-Generative multinomial NB over hashed features with Laplace smoothing. **Strong baseline, learns in
-a single pass**, no retraining needed.
-
-```kotlin
-val nb = NaiveBayesClassifier(smoothingAlpha = 1.0)   // default α = 1.0 (Laplace)
-val engine = ClassificationService(schema, PrivacyModeEnum.FEATURES_ONLY, config, classifier = nb)
-engine.learnAll(trainingRecords)                       // one pass is enough
-```
-
-- `smoothingAlpha` — additive smoothing over the feature vocabulary. Lower (→ 0) trusts the data
-  more (riskier on sparse classes); higher smooths harder. Default `1.0` is a safe start.
-
-### Logistic Regression (SGD) — `LogisticRegressionSgdClassifier`
-
-Discriminative multinomial logistic regression trained online with SGD. Models correlated features
-better than NB, but **usually needs multiple passes** to converge — use `retrain(epochs)`.
-
-```kotlin
-val lr = LogisticRegressionSgdClassifier(
-    initialLearningRate = 0.1,    // default
-    decayRate = 0.0,              // default: constant LR;  lr(t) = lr0 / (1 + decayRate * step)
-    l2Regularization = 0.0,       // default: no L2;  raise to fight overfitting
-)
-val engine = ClassificationService(schema, PrivacyModeEnum.FEATURES_ONLY, config, classifier = lr)
-
-engine.learnAll(trainingRecords)
-engine.retrain(epochs = 50)       // replay the stored corpus 50× (see below)
-```
-
-### Hyperparameter cheat-sheet (data scientists)
-
-| Classifier | Param | Default | Tune toward |
-|------------|-------|---------|-------------|
-| NaiveBayes | `smoothingAlpha` | `1.0` | ↓ for confident large data, ↑ for sparse/noisy |
-| LogisticRegression | `initialLearningRate` | `0.1` | ↓ if loss oscillates, ↑ if convergence is slow |
-| LogisticRegression | `decayRate` | `0.0` | `>0` to anneal LR over a long training run |
-| LogisticRegression | `l2Regularization` | `0.0` | `>0` to reduce overfitting on small data |
-
-### `retrain` — batch passes from the stored corpus
-
-```kotlin
-fun retrain(epochs: Int = 1, seed: Long? = null)
-```
-
-Resets the classifier and replays **every stored observation** `epochs` times. The stored corpus is
-kept intact (only the model state is rebuilt), so retraining is repeatable.
-
-- `seed == null` (default) → replays in stored order: fully deterministic and resumable.
-- `seed != null` → shuffles each epoch deterministically. **Recommended for SGD**: decorrelating
-  consecutive updates improves convergence.
-
-```kotlin
-engine.retrain(epochs = 50, seed = 42)    // 50 shuffled passes, reproducible
-```
-
-Naive Bayes is order-independent, so `retrain` mostly matters for the SGD model.
-
-### Persist your tuning
-
-Loading a model **replays its stored observations through a freshly built classifier**, so the
-tuning has to travel with the file or the restored model is a different model:
-
-```kotlin
-ModelStore.save(
-    path = path,
-    schema = engine.schema,
-    classifier = ClassifierKindEnum.LOGISTIC_REGRESSION,
-    hashingConfig = hashingConfig,
-    observations = engine.featureStore.all(),
-    calibration = engine.calibration,
-    hyperparameters = engine.classifier.hyperparameters(),   // ← without this, defaults come back
-)
-
-val loaded = ModelStore.load(path = path)
-val classifier = ClassifierFactory.create(kind = loaded.classifier, hyperparameters = loaded.hyperparameters)
-```
-
-`save` receives the classifier *kind*, not the instance, so it cannot discover the tuning by itself.
-`ClassifierHyperparameters` carries all of it in one value; fields belong to the classifiers that
-use them (`smoothingAlpha` to Naive Bayes, the SGD trio to logistic regression) and the rest stay at
-their defaults.
-
----
-
-## 5. Measure model quality — `ModelEvaluator`
-
-Training tells you nothing about whether the model is any good. `ModelEvaluator` answers that.
-
-```kotlin
-val evaluator = ModelEvaluator()
-
-// (a) score a trained model against data it has never seen
-val report = evaluator.evaluate(classifier = engine.classifier, holdout = heldOutObservations)
-
-// (b) same thing from records, reading truth from the schema's label field
-val fromRecords = evaluator.evaluateRecords(service = engine, records = labeledRecords)
-
-// (c) measure the RECIPE: retrain over a stratified split or k folds
-val cv = evaluator.crossValidate(
-    observations = engine.featureStore.all(),
-    classifierFactory = { ClassifierFactory.create(kind = ClassifierKindEnum.NAIVE_BAYES) },
-    folds = 5,
-)
-println("mean ${cv.meanAccuracy()} ± ${cv.accuracyStandardDeviation()}")
-```
-
-> **What is actually being measured.** `evaluate` and `evaluateRecords` score *the model you hand
-> them*, so the data must genuinely be held out. `holdout` and `crossValidate` train **new** models,
-> so they measure the recipe — classifier, corpus and settings — not any particular saved artifact.
-> In particular, a `.skein` file stores the *training* observations, so cross-validating over them
-> says nothing about the model saved in that same file: it saw all of those rows.
-
-### The metric conventions
-
-| Metric | Convention |
+| | |
 |---|---|
-| precision / recall / F1 | a zero denominator yields `0.0`, never `NaN` |
-| macro average | over **every** label in the matrix, including one predicted but never expected, so a hallucinated label drags it down |
-| micro average | aggregates TP/FP/FN first; for single-label multi-class it equals accuracy |
-| weighted average | each label's metric weighted by its support |
-| top-k accuracy | truth anywhere in the top k alternatives; `topK = 1` reproduces accuracy |
-| log loss | the true label's probability is floored at `1e-15`, so an unseen label costs a large but finite penalty |
-| Brier score | multi-class, in `[0, 2]`; a true label with no output unit costs a full `1.0` |
-| ECE | support-weighted mean gap between confidence and accuracy across the reliability bins |
+| [Overview](../docs/classify/README.md) | The module, the single/multi-label decision, package layout |
+| [Schema and records](../docs/classify/schema.md) | Field types, keeping PII out of features, bulk import |
+| [Featurisation](../docs/classify/featurisation.md) | Hashing, n-grams, the privacy guarantee, IDF, the `Vectorizer` port |
+| [Single-label](../docs/classify/single-label.md) | Naive Bayes, online SGD, calibration, explanations, active learning |
+| [Multi-label](../docs/classify/multi-label.md) | L-BFGS batch training, per-label thresholds |
+| [Evaluation](../docs/classify/evaluation.md) | Metrics, grouped cross-validation, threshold sweeps |
+| [Persistence](../docs/classify/persistence.md) | The `.skein` format, fingerprints, model size |
+| [Scale](../docs/classify/scale.md) | Above a million records |
 
-`support` counts **unique** observations, because `InMemoryFeatureStore` deduplicates identical rows.
+Semantic features instead of literal n-grams:
+[`skein-classify-embedding-onnx`](../skein-classify-embedding-onnx) and
+[Embeddings](../docs/embeddings/README.md).
 
-`epochs` above 1 only affects SGD models: Naive Bayes rebuilds its snapshot from the batch, so extra
-passes are a no-op.
-
-Splits are stratified and deterministic under a seed. Every label keeps at least one training
-example — without that, a rare class vanishes from training and scores a recall of zero that
-measures the split rather than the model.
-
----
-
-## 6. Calibrate confidences and abstain
-
-The raw softmax runs over **unnormalized** Naive Bayes log-likelihoods, which saturate near 0 and 1.
-Those numbers are shown to humans and drive uncertainty sampling, so the overconfidence is not
-cosmetic — it degrades active learning.
-
-```kotlin
-engine.fitCalibration(heldOut = heldOutObservations)   // fits and installs a temperature
-engine.classify(record = record).confidence            // now calibrated
-
-// abstain rather than guess
-val prediction: Prediction? = engine.classifyOrNull(record = record, minConfidence = 0.85)
-```
-
-Temperature scaling is **rank-preserving**: it never changes which label wins, only how confident
-the model claims to be. So accuracy and top-k are untouched while log loss and ECE improve.
-
-> **Fit on held-out data.** Scores on rows the model trained on already look well calibrated, so
-> fitting there returns a temperature near 1 and silently does nothing.
-
-Expect a poor log loss and ECE from `NaiveBayesClassifier` even at high accuracy — that is the
-failure mode calibration exists to correct, and the reliability bins are how you see it.
-
----
-
-## 7. Why this label — `explain`
-
-```kotlin
-val explanation = engine.explain(record = record, limit = 10)!!
-explanation.contributions.forEach { c ->
-    println("bucket ${c.featureIndex}  ${c.contribution}")
-}
-```
-
-The decomposition is **exact**: `base` plus the contribution of every feature equals `total`, and
-`total` is the label's score minus the mean score across labels — precisely the quantity the softmax
-turns into a probability. No sampling, no surrogate model.
-
-Contributions are **mean-centered**, which is what makes them readable. Every Naive Bayes term is a
-log-probability and therefore negative, so ranking the raw terms would rank by "least negative" and
-surface whichever n-grams are commonest overall. Centering turns each term into a log-odds ratio
-against the average label, so a feature equally likely under every label contributes exactly zero.
-
-By default a contribution carries only its opaque bucket id, which is safe to log. A bucket is a
-**stable pseudonym** under a fixed key, which is enough to spot a single feature dominating a
-prediction (usually an identifier that leaked into the features), to watch influence drift between
-model versions, and to diagnose collisions.
-
-```kotlin
-engine.explain(record = record, mode = AttributionModeEnum.WITH_NGRAMS)
-```
-
-> **`WITH_NGRAMS` returns clear text.** It builds no index and weakens no saved model — the n-grams
-> are re-derived on the call from the record you passed in, so it grants nothing to an adversary who
-> does not already hold both the hashing key and the record. But the *result* contains source text:
-> do not log it or send it anywhere the record itself may not go. This is why it is a per-call
-> argument rather than a setting — every site that produces clear text is greppable.
-
----
-
-## 8. Keep a human in the loop — `ActiveLearningSelector`
-
-Don't label everything. Train on a little, then ask the model which **unlabeled** records it's most
-unsure about, label those, and feed them back. This is the cheapest path to accuracy.
-
-```kotlin
-val selector = ActiveLearningSelector(engine)
-val candidates = selector.selectForReview(
-    candidates = unlabeledRecords,
-    limit = 10,
-    strategy = UncertaintyStrategyEnum.MARGIN,   // default
-)
-
-candidates.forEach { c ->
-    println("guess=${c.prediction.label.value} margin=${c.margin}")
-    // a human assigns the true label, then:
-    engine.feedback(c.record, correctLabel = humanLabel)
-}
-```
-
-Returns up to `limit` `ReviewCandidate`s (`record`, model `prediction`, uncertainty `margin`),
-**most-uncertain first**.
-
-### Uncertainty strategies — `UncertaintyStrategyEnum`
-
-| Strategy | Measures | "Uncertain" means |
-|----------|----------|-------------------|
-| `MARGIN` (default) | gap between top-1 and top-2 probabilities | small gap (two labels nearly tied) |
-| `LEAST_CONFIDENCE` | `1 − top probability` | low top probability |
-| `ENTROPY` | Shannon entropy over all label probabilities | spread-out distribution |
-
-A typical loop: `learnAll(seed)` → `selectForReview` → human labels → `feedback` → repeat until
-`metrics()` and held-out accuracy plateau.
-
----
-
-## 9. Storage — `FeatureStore`
-
-`ClassificationService` persists every observation (label + feature vector) to a `FeatureStore`,
-which is what `retrain`, `metrics`, and `forget` read/clear.
-
-- `InMemoryFeatureStore` (default) — thread-safe, unbounded, lost on restart.
-- `PostgresFeatureStore` (`skein-store-postgres`) — durable, with optional AES-256-GCM at rest for
-  `ENCRYPTED_SOURCE`. Plug it in via the `featureStore` constructor param.
-
-```kotlin
-val engine = ClassificationService(
-    schema, PrivacyModeEnum.ENCRYPTED_SOURCE, config,
-    featureStore = postgresStore,        // see skein-store-postgres
-)
-```
-
-The `FeatureStore` SPI (`add` / `addAll` / `all` / `labels` / `size` / `clear`) is small — implement
-it to back the corpus with anything you like.
-
----
-
-## 10. Bulk import — `RecordImportService`
-
-For ingesting a stream (CSV, DB cursor, …) with validation in one pass:
-
-```kotlin
-val source = object : RecordSource {                 // streaming, constant memory
-    override fun stream(): Sequence<Record> = csvRows.map { Record(it) }
-}
-val result = RecordImportService(schema).importFrom(source)
-
-result.accepted        // List<MappedRecord> — passed validation
-result.rejected        // List<RejectedRecord> — with per-record reasons
-result.warnings        // non-fatal notes (unknown/missing fields)
-result.acceptedCount()
-```
-
-`MappedRecord` is `(featureText, label?)` — the already-mapped, PII-stripped view ready to learn from.
-
----
-
-## Worked example: train from scratch
-
-```kotlin
-val schema = Schema.define {
-    text("purpose"); identifier("iban"); label("category")
-}
-val config = HashingConfig(key0 = 1L, key1 = 2L)      // fixed key → model is reproducible
-val engine = ClassificationService(schema, PrivacyModeEnum.FEATURES_ONLY, config)
-
-engine.learnAll(listOf(
-    Record(mapOf("purpose" to "AIG-Life 67,89 insurance premium", "iban" to "DE00", "category" to "insurance")),
-    Record(mapOf("purpose" to "Allstate-Home 90,00 insurance premium", "iban" to "DE01", "category" to "insurance")),
-    Record(mapOf("purpose" to "rent apartment monthly", "iban" to "DE02", "category" to "rent")),
-    Record(mapOf("purpose" to "salary october payout", "iban" to "DE03", "category" to "salary")),
-))
-
-val p = engine.classify(Record(mapOf("purpose" to "Geico-Auto 120,00 insurance premium", "iban" to "DE99")))
-println("${p.label.value} @ ${"%.2f".format(p.confidence)}")   // insurance @ 1.00
-```
-
-See [`examples`](../examples) for the full **classify → route → extract** pipeline that combines this
-module with `skein-extract`.
-
----
-
-## Package layout
-
-```
-io.skein.classify
-├─ domain/          Record, Schema + FieldSpec hierarchy, SensitivityEnum, Label, FeatureVector,
-│                   LabeledFeatures, HashingConfig, Prediction/ScoredLabel, PredictionFactory,
-│                   PrivacyModeEnum, UncertaintyStrategyEnum, ReviewCandidate, ClassificationMetrics,
-│                   ImportResult/RejectedRecord/MappedRecord, ValidationResult,
-│                   Calibration, CalibrationSample, Explanation, FeatureContribution,
-│                   AttributionModeEnum, PredictionOutcome, ConfusionMatrix, LabelMetrics,
-│                   AveragedMetrics, CalibrationBin, DatasetSplit, EvaluationReport,
-│                   CrossValidationReport, EvaluationReportFactory
-├─ application/     SchemaValidator, SchemaInference, HashingVectorizer, RecordMapper,
-│                   RecordImportService, ClassificationService, ActiveLearningSelector,
-│                   ModelStore/LoadedModel/ClassifierKindEnum, ClassifierFactory,
-│                   ModelEvaluator, StratifiedSplitter, EvaluationReportFormatter,
-│                   TemperatureCalibrator
-├─ spi/             Classifier, FeatureStore, RecordSource (ports)
-└─ infrastructure/  SipHash, InMemoryFeatureStore, NaiveBayesClassifier, LogisticRegressionSgdClassifier
-```
-
-> **Privacy summary:** PII fields never enter `featureText`; feature text is hashed with a keyed,
-> irreversible PRF; `key0/key1` are a required secret you control; and `ENCRYPTED_SOURCE` + an
-> encrypting store is the only way original content is retained, always encrypted at rest.
-
+New here? [Getting started](../docs/getting-started.md) ·
+[Bring your own data](../docs/bring-your-own-data.md)

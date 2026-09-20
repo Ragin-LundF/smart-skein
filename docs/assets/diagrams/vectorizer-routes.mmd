@@ -1,0 +1,25 @@
+graph TD
+    text["featureText"]
+    port["Vectorizer port<br/><i>vectorize · dimension · fingerprint</i>"]
+
+    hash["HashingVectorizer<br/>skein-classify<br/><b>41 µs/record</b>"]
+    onnx["OnnxEmbeddingVectorizer<br/>skein-classify-embedding-onnx<br/><b>0.1–3 ms/record</b>"]
+    http["HttpEmbeddingVectorizer<br/>examples<br/><b>network round trip</b>"]
+
+    hashNote["literal n-grams<br/>irreversible, keyed<br/>no model file"]
+    onnxNote["semantic<br/>model bytes hashed<br/>runs in your JVM"]
+    httpNote["semantic<br/>identity is declared, not verified<br/>LM Studio · Ollama · OpenAI"]
+
+    fv["FeatureVector<br/><i>the learner sees only this</i>"]
+
+    text --> port
+    port --> hash --> hashNote --> fv
+    port --> onnx --> onnxNote --> fv
+    port --> http --> httpNote --> fv
+
+    classDef port fill:#1f2937,stroke:#111827,color:#f9fafb
+    classDef impl fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef note fill:#f9fafb,stroke:#d1d5db,color:#374151
+    class port,fv port
+    class hash,onnx,http impl
+    class hashNote,onnxNote,httpNote note

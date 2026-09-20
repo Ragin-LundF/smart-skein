@@ -1,245 +1,88 @@
 # examples
 
-Runnable Skein demonstrations. **Not published.** Depends on `skein-text`, `skein-classify`,
-and `skein-extract`.
-
-Each use case is a self-contained example of how to wire up a classifier for a specific domain.
-Run any of them from the project root via Gradle:
+Runnable demonstrations, one per capability. Not published, and nothing else depends on it.
 
 ```bash
-./gradlew :examples:run --args="<use-case> [args...]"
+./gradlew :examples:run                       # prints the list
+./gradlew :examples:run --args="recipes"      # run one
 ```
 
----
+Everything here is meant to be read as much as run. Several files are written to be copied into your
+own codebase — `HttpEmbeddingVectorizer` in particular.
 
-## All use cases
+## Start with these
 
-`./gradlew :examples:run` with no arguments prints this list too.
-
-| Use case | Shows |
+| Example | Shows |
 |---|---|
-| `transaction` | Classify bank-transaction text, route by category, extract structured fields |
-| `textrepair` | Train a `FrequencyModel`, repair broken words, full normalize → tokenize pipeline |
-| `patternmatching` | `TokenPattern` DSL, `findAll`, `matchesFully`, partial and non-matching cases |
-| `slots` | `PositionalSlot` vs `KeyAnchoredSlot` extraction |
-| `schemainference` | Infer a schema from samples, classify with it, and where the heuristics stop |
-| `validation` | `SchemaValidator` on valid, invalid and warning-bearing records |
-| `clustering` | `TemplateClusterer`: unsupervised layout discovery |
-| `persistence` | `ModelStore` save/load round-trip; `FrequencyModel` serialize/deserialize |
-| `import` | `RecordImportService`: stream, validate, accept/reject, feed the classifier |
+| `recipes` | **Multi-label classification end to end.** A model distilled from a JSON keyword ruleset: grouped against ungrouped cross-validation, a threshold sweep, per-label thresholds, an explained prediction, and a hand-written held-out set using wording the rules never mention |
+| `embedding-service` | Embeddings from LM Studio or any OpenAI-compatible server, compared against the hashing baseline. Prints the setup if no server is reachable |
+| `embedding-onnx` | An embedding model run in-process through ONNX Runtime. Prints the export command if no model is configured |
+| `transaction` | Classify → route → extract, the original end-to-end pipeline |
+
+`recipes` is the one to read first if you are new. It is also the only example that shows the
+measurement most people skip: how much worse a rule-distilled model does on wording the rules do not
+cover.
+
+## Everything else
+
+**Foundations**
+
+| | |
+|---|---|
+| `textrepair` | Frequency model, broken-word repair, the full normalize → tokenize pipeline |
+| `patternmatching` | The TokenPattern DSL: `findAll`, `matchesFully`, partial and non-matching cases |
+| `slots` | Positional against key-anchored extraction |
+| `schemainference` | Infer a schema from samples, classify with it, and its edge cases |
+| `validation` | Valid, invalid and warning-bearing records |
+| `clustering` | Unsupervised layout discovery from a mixed corpus |
+| `persistence` | `ModelStore` round-trip, frequency model serialisation |
+| `import` | Streaming import with validation, feeding a classifier |
+
+**Workflows**
+
+| | |
+|---|---|
 | `regression` | Naive Bayes → logistic regression retraining, confidence comparison |
-| `activelearning` | `ActiveLearningSelector`: pick uncertain rows, give feedback, watch metrics move |
-| `crf` | Train a CRF tagger, generalize to unseen input, then save, reload and resume training |
-| `explain` | Calibrate confidences, abstain below a threshold, explain why a label won |
-| `clidemo` | Schema inference plus an active-learning loop, with equivalent CLI commands |
-| `tokenization` | `WHITESPACE` vs `PUNCTUATION_AWARE` tokenizer modes |
-| `customtokens` | A custom `TokenPatternConfig` recognizing a domain order code |
-| `normalizeredges` | Normalizer idempotence and boundary behaviour |
-| `privacy` | PII fields excluded from features; `FEATURES_ONLY` mode |
-| `signature` | `PatternSignature`: identical layouts share a fingerprint |
-| `clitool` | Predict every row, then export a model as readable text |
-| `logwatch` | Train an anomaly detector from keyword rules, then scan log files |
+| `activelearning` | Uncertainty sampling, feedback, metrics |
+| `crf` | Train a CRF token tagger, generalise to unseen input, save and resume |
+| `explain` | Calibrate confidences, abstain, explain a prediction |
+| `clidemo` | Schema inference plus an active-learning loop, with CLI equivalents |
+| `tokenization` | `WHITESPACE` against `PUNCTUATION_AWARE` |
+| `customtokens` | A custom `TokenPatternConfig` with a domain recogniser |
 
-The two below are walked through in full; the rest are self-explanatory when run.
+**Edge cases**
 
----
-
-## Use cases
-
-### `transaction` — classify → route → extract
-
-Classifies bank-transaction purpose text into categories (insurance / rent / salary), then routes
-each category to specific extraction rules that pull out the structured values that matter for it.
-
-Shows the full **classify → route → extract** pipeline using `ClassificationService`, `NaiveBayesClassifier`,
-and `SlotExtractor` in a single end-to-end flow. Training data is inline; no external files needed.
-
-```bash
-./gradlew :examples:run --args="transaction"
-```
-
-Expected output:
-
-```
-purpose : AIG-Life 67.89 Geico-Auto 120.00 insurance premium
-  category   : insurance (confidence 1.00)
-  extracted  : insurer = AIG-Life
-  extracted  : amount = 67.89
-  extracted  : insurer = Geico-Auto
-  extracted  : amount = 120.00
-purpose : rent apartment CustomerNumber CD456 monthly
-  category   : rent (confidence 1.00)
-  extracted  : customer = CD456
-purpose : salary november payout
-  category   : salary (confidence 0.xx)
-  extracted  : (no fields routed for this category)
-```
-
----
-
-### `logwatch` — anomaly detection in log files
-
-Trains a classifier from a **keyword rules CSV** (`anomaly_type, level, message`) and then scans
-log files line by line, flagging anything that looks like an anomaly.
-
-Shows how to:
-- Define a schema with a text field (`message`) and a categorical field (`level`)
-- Generate training records from a rules file instead of hand-labeling data
-- Save a trained model with `ModelStore.save` and reload it with `ModelStore.load`
-- Apply the model at scan time without retraining
-
-```bash
-# Step 1: train on the bundled rules and save the model
-./gradlew :examples:run --args="logwatch train"
-
-# Step 1 (custom rules): train on your own rules CSV
-./gradlew :examples:run --args="logwatch train --rules /path/to/rules.csv"
-
-# Step 2: scan the bundled sample log (prints anomalies to stdout)
-./gradlew :examples:run --args="logwatch scan --sample"
-
-# Step 2 (real log): scan a log file and write anomalies to CSV
-./gradlew :examples:run --args="logwatch scan --log /var/log/app.log --out anomalies.csv"
-
-# Adjust the minimum confidence threshold (default 0.5)
-./gradlew :examples:run --args="logwatch scan --sample --confidence 0.7"
-```
-
-**Rules CSV format** (`anomaly_type,level,message`):
-each row defines one labeled training example — the `message` column is the keyword text that
-characterizes that anomaly type at the given log level.
-
-```csv
-anomaly_type,level,message
-NORMAL,INFO,started
-NORMAL,DEBUG,processing
-DB_ERROR,ERROR,SQLException
-TIMEOUT,WARN,timeout
-SECURITY,ERROR,access denied
-OOM,ERROR,OutOfMemoryError
-CONNECTION_FAIL,ERROR,Connection refused
-```
-
-The bundled `rules.csv` and `sample.log` live under
-`src/main/resources/logwatch/` and are used automatically when no `--rules` / `--log` path is given.
-
----
-
-## Tutorial: `TransactionCategorizationExample`
-
-The transaction example implements **classify → route → extract** over bank-transaction purpose
-text. Walk it top to bottom — each step maps to one of the library modules.
-
-### Step 0 — define the schema
-
-```kotlin
-private val schema = Schema.define {
-    text(name = "purpose")          // the free-text we classify on → becomes feature text
-    identifier(name = "iban")       // PII by default → excluded from features
-    label(name = "category")        // the target label
-}
-```
-
-`purpose` carries the signal; `iban` is present but, being an `identifier` (PII), never enters the
-feature text; `category` is what the model predicts.
-
-### Step 1 — build the engine and train it
-
-```kotlin
-private val engine = ClassificationService(
-    schema = schema,
-    privacyMode = PrivacyModeEnum.FEATURES_ONLY,
-    hashingConfig = HashingConfig.randomKey(),     // fresh key per run — fine for a demo
-)
-
-init { train() }
-
-// train() calls engine.learnAll(listOf(sample(...), ...)) with 8 labeled examples
-```
-
-> ⚠️ **`HashingConfig.randomKey()` is for demos only.** The feature indices differ every run, so a
-> model trained here cannot be persisted and reloaded. In production pass a **fixed secret key**
-> (`HashingConfig(key0 = …, key1 = …)`) so the model is reproducible across restarts.
-
-### Step 2 — classify, route, extract
-
-```kotlin
-fun process(purpose: String): PipelineResult {
-    val prediction = engine.classify(Record(mapOf("purpose" to purpose, "iban" to "DE00")))
-    val extraction = extractor.extract(text = purpose, slots = slotsFor(prediction.label))
-    return PipelineResult(prediction.label, prediction.confidence, extraction)
-}
-```
-
-`slotsFor` is a plain `when` on the label: each category gets its own extraction rules.
-The classifier decides *what kind* of text this is; that decision picks *which* rules to run.
-
----
-
-## Tutorial: `LogAnomalyDetector`
-
-The log-watch example shows the **train from rules → save → load → scan** pattern.
-
-### Step 0 — define the schema
-
-```kotlin
-val LOG_SCHEMA: Schema = Schema.define {
-    text("message")       // the log message text (keyword used as training signal)
-    categorical("level")  // ERROR / WARN / INFO / DEBUG — a separate categorical feature
-    label("anomaly_type") // what the model predicts
-}
-```
-
-### Step 1 — generate training records from the rules CSV
-
-```kotlin
-fun trainFromRulesCsv(csv: String): Pair<ClassificationService, InMemoryFeatureStore> {
-    val store = InMemoryFeatureStore()
-    val service = ClassificationService(
-        schema = LOG_SCHEMA,
-        privacyMode = PrivacyModeEnum.FEATURES_ONLY,
-        hashingConfig = HASHING_CONFIG,         // fixed key so the saved model is reloadable
-        classifier = NaiveBayesClassifier(),
-        featureStore = store,                   // pass explicitly so we can hand it to ModelStore.save
-    )
-    val records = parseRulesCsv(csv).map { row -> Record(values = row) }
-    service.learnAll(records = records)
-    return service to store
-}
-```
-
-### Step 2 — save and reload
-
-```kotlin
-// Save
-ModelStore.save(path, LOG_SCHEMA, ClassifierKindEnum.NAIVE_BAYES, HASHING_CONFIG, store.all())
-
-// Load and rebuild
-val model = ModelStore.load(path)
-val store = InMemoryFeatureStore().also { it.addAll(model.observations) }
-val service = ClassificationService(schema = model.schema, ..., featureStore = store)
-service.retrain(epochs = 1)   // replays observations through a fresh NaiveBayes
-```
-
-### Step 3 — classify log lines
-
-```kotlin
-fun ClassificationService.classifyLine(line: String): LogPrediction? {
-    val (level, message) = parseLine(line) ?: return null   // null if no log level found
-    val result = classify(record = Record(values = mapOf("message" to message, "level" to level)))
-    return LogPrediction(line, level, result.label.value, result.confidence)
-}
-```
-
----
-
-## Adapting to your data
-
-| What you want | Where to look |
+| | |
 |---|---|
-| Change the schema (fields, types, PII exclusions) | `Schema.define { ... }` |
-| Load training records from a file instead of inline | `RecordImportService`, `learnAll` |
-| Switch to logistic regression for more data | `LogisticRegressionSgdClassifier`, `retrain(epochs)` |
-| Save and reload models across restarts | `ModelStore.save`, `ModelStore.load`, fixed `HashingConfig` |
-| Active-learning: pick what to label next | `ActiveLearningSelector` |
-| Extract structured values after classification | `SlotExtractor`, `skein-extract` |
+| `normalizeredges` | Normalizer idempotence and boundaries |
+| `privacy` | PII exclusion from features |
+| `signature` | Identical layouts produce identical fingerprints |
+| `clitool` | Predict all rows and export a model as readable text |
+| `logwatch` | Train an anomaly detector from a keyword rules CSV, then scan logs |
+
+## The corpora
+
+`recipes` and both embedding examples share one corpus, in
+[`RecipeCorpus`](src/main/kotlin/io/skein/examples/recipes/RecipeCorpus.kt):
+
+- **~400 generated recipes** from a seeded combinatorial template, labelled by running
+  [`recipe-rules.json`](src/main/resources/recipe-rules.json). Committed as a generator with a fixed
+  seed, so it is identical on every machine.
+- **40 hand-written recipes** using wording the rules miss — `aubergine`, `courgette`,
+  `cacio e pepe`, `sans gluten` — labelled by hand.
+
+The second set is the point. A model trained only on rule-generated data largely learns the rules;
+this is the only thing that measures whether it generalises past them.
+
+## Copyable pieces
+
+| File | What it is |
+|---|---|
+| [`HttpEmbeddingVectorizer`](src/main/kotlin/io/skein/examples/embedding/HttpEmbeddingVectorizer.kt) | A `Vectorizer` over any OpenAI-compatible embeddings endpoint. ~120 lines on the JDK HTTP client, [tested against a real server](src/test/kotlin/io/skein/examples/embedding/HttpEmbeddingVectorizerTest.kt). Copy it and add your auth headers |
+| [`EmbeddingServiceConfig`](src/main/kotlin/io/skein/examples/embedding/EmbeddingServiceConfig.kt) | The settings that have to be pinned for a remote model to be trustworthy |
+| [`RecipeRuleset`](src/main/kotlin/io/skein/examples/recipes/RecipeRuleset.kt) | A rule interpreter in a dozen lines, making the point that the library never sees your rule format |
+
+## Documentation
+
+[All documentation](../docs/README.md) · [Getting started](../docs/getting-started.md) ·
+[Embeddings](../docs/embeddings/README.md)

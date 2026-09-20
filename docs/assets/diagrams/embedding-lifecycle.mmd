@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    participant You
+    participant V as Vectorizer
+    participant M as Embedding model
+    participant L as BatchLearner
+    participant S as ModelStore
+
+    rect rgb(238, 242, 255)
+    note over You,S: Training
+    You->>V: vectorizeAll(corpus)
+    V->>M: one batch per request
+    M-->>V: dense vectors
+    V-->>You: FeatureVector per record
+    You->>L: fit(observations)
+    L-->>You: MultiLabelClassifier
+    You->>S: saveMultiLabel(model, vectorizer)
+    note right of S: the vectorizer fingerprint<br/>is written into the file
+    end
+
+    rect rgb(240, 253, 244)
+    note over You,S: Inference
+    You->>S: loadMultiLabel(path, vectorizer)
+    S->>S: compare fingerprints
+    alt fingerprints differ
+        S-->>You: VectorizerMismatchException
+    else fingerprints match
+        S-->>You: model
+        You->>V: vectorize(record)
+        V->>M: embed
+        M-->>V: dense vector
+        V-->>You: FeatureVector
+        You->>You: model.predict(features, threshold)
+    end
+    end

@@ -1,0 +1,19 @@
+graph LR
+    record["Record<br/><i>field map</i>"]
+    mapper["RecordMapper<br/><i>drops PII and the label,<br/>joins the rest</i>"]
+    text["featureText<br/><i>String</i>"]
+    vec["Vectorizer<br/><i>hashing · ONNX · HTTP</i>"]
+    fv["FeatureVector<br/><i>sparse indices + values</i>"]
+    single["Classifier<br/><i>softmax, one winner</i>"]
+    multi["MultiLabelClassifier<br/><i>independent sigmoids</i>"]
+    pred["Prediction<br/><i>label + confidence</i>"]
+    mpred["MultiLabelPrediction<br/><i>any number of labels</i>"]
+
+    record --> mapper --> text --> vec --> fv
+    fv -->|one label per record| single --> pred
+    fv -->|labels co-occur| multi --> mpred
+
+    classDef step fill:#1f2937,stroke:#111827,color:#f9fafb
+    classDef value fill:#e5e7eb,stroke:#6b7280,color:#111827
+    class mapper,vec,single,multi step
+    class record,text,fv,pred,mpred value
