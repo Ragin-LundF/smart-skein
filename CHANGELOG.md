@@ -51,6 +51,16 @@ All notable changes to this project will be documented in this file.
   side, a threshold sweep, per-label thresholds, an explained prediction, and a hand-written held-out
   set using wording the rules never mention — the only number that says whether the model generalises
   past the rules.
+- **`skein-classify-embedding-onnx`** — a new published adapter module implementing `Vectorizer`
+  with an external ONNX sentence-embedding model, so a classifier can generalise past the literal
+  wording hashed n-grams match. `OnnxEmbeddingVectorizer.open(modelPath, tokenizerPath)` wires ONNX
+  Runtime and a Hugging Face tokenizer; mean or CLS pooling, optional L2 normalisation, batch
+  embedding, and a bounded LRU `EmbeddingCache` so a hyperparameter sweep embeds each record once.
+  Its fingerprint digests the **model file's contents**, the tokenizer file, the pooling strategy,
+  the normalisation and the hidden size, so a model swapped in place under an unchanged name is
+  refused at load. Dense vectors are expressed through the existing sparse `FeatureVector`, so the
+  learner, the objective and the scoring loop are unchanged. The ONNX Runtime and tokenizer native
+  binaries live only in this module — a consumer using feature hashing inherits neither.
 - **[`docs/bring-your-own-data.md`](docs/bring-your-own-data.md)** — six steps from your records to a
   model, including the single question that decides single- versus multi-label.
 

@@ -18,6 +18,7 @@ include("skein-text")
 include("skein-classify")
 include("skein-extract")
 include("skein-store-postgres")
+include("skein-classify-embedding-onnx")
 include("skein-cli")
 include("examples")
 

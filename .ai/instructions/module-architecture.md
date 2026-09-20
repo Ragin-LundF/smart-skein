@@ -60,8 +60,8 @@ Rules:
                  skein-text  (foundation, no dependencies)
                   ╱        ╲
         skein-classify    skein-extract
-              │
-     skein-store-postgres
+          ╱        ╲
+skein-store-postgres  skein-classify-embedding-onnx
 ```
 
 | Module | Published | Responsibility |
@@ -70,6 +70,7 @@ Rules:
 | `skein-classify` | yes | Assigning labels to a whole record — one label, or several when labels co-occur: schema definition and validation, privacy-preserving feature hashing, the learning algorithms, model persistence, active-learning support, calibration, explanation and quality evaluation. Single-label scoring is the `Classifier` port; co-occurring labels are `MultiLabelClassifier` with `BatchLearner`, and the two are siblings rather than alternatives. See `docs/adr/0001-multi-label-classification.md`. |
 | `skein-extract` | yes | Pulling structured values *out* of text: typed-token patterns, slot filling, layout clustering, and a trainable token tagger with its own model format. Unlike classification, it returns real values rather than hashes. |
 | `skein-store-postgres` | yes | An optional storage adapter implementing the classification module's storage port against PostgreSQL, with encryption at rest. Contains no learning logic. |
+| `skein-classify-embedding-onnx` | yes | An optional adapter implementing the classification module's `Vectorizer` port with an external ONNX sentence-embedding model, so a classifier can generalise past literal wording. Contains no learning logic. Exists as its own module so that the ONNX Runtime and tokenizer native binaries stay out of every consumer that uses feature hashing. |
 | `skein-cli` | yes | Command-line tools over the library: interactive labeling, batch prediction, model inspection and evaluation. Holds only CLI concerns — argument parsing, CSV I/O, terminal interaction — and no algorithm that belongs in a library module. |
 | `skein-bom` | yes | Version alignment for consumers. Contains no code. |
 | `examples` | no | Runnable demonstrations, one per capability. Not published, and nothing else may depend on it. |

@@ -153,6 +153,54 @@ val loaded = ModelStore.loadMultiLabel(path = path, vectorizer = vectorizer)
 That is deliberate and it is not configurable: a model scored with a different featurisation does
 not fail — it returns confident, wrong labels, silently, for as long as nobody notices.
 
+## If literal wording is not enough
+
+Feature hashing matches text as written: a model trained on "eggplant" has learned nothing about
+"aubergine". When that gap is what limits you, swap the vectorizer rather than the pipeline.
+
+```kotlin
+OnnxEmbeddingVectorizer.open(
+    modelPath = Path.of("model.onnx"),
+    tokenizerPath = Path.of("tokenizer.json"),
+    cache = EmbeddingCache(),
+).use { vectorizer ->
+    val learner = LbfgsMultiLabelLearner(featureCount = vectorizer.dimension())
+    val model = learner.fit(observations = corpus.map { row -> /* as above */ })
+}
+```
+
+Nothing else changes. A dense embedding travels through the same sparse `FeatureVector`, so the
+learner, the objective and the scoring loop never learn that anything is different.
+
+Decide it on throughput, because that is what actually moves:
+
+| Vectorizer | per record | throughput |
+|---|---|---|
+| Hashing / n-grams | **41 µs** | **24,000/s** |
+| Static embeddings (Model2Vec-class) | ~100–200 µs | 5,000–10,000/s |
+| MiniLM-class transformer, ONNX int8 | ~1–3 ms | 300–1,000/s per core |
+
+A transformer encoder can put a 1,000 records/s target at risk on featurisation alone, before any
+classification happens — and at 2 ms per record, embedding a million rows is **33 minutes per
+training run**. Two things make that workable, and both are built in: `vectorizeAll` embeds a whole
+batch in one pass, and an `EmbeddingCache` means a hyperparameter sweep pays for each distinct
+record once. Deduplicate first (below) and the cache is far smaller than the corpus.
+
+The classifier itself gets *smaller*: 384 dimensions x 237 labels x 4 bytes is 364 KB against 17 MB
+for a sparse n-gram model, and pruning stops being worth doing. The artifact that matters becomes
+the embedding model, at 20–400 MB.
+
+Two things to get right, because neither fails loudly:
+
+- **Pooling must match how the model was trained.** Mean pooling is what sentence-transformers
+  models expect and is the default; `CLS` is correct only for models trained to put a sentence
+  representation at the first position. The wrong choice does not error, it just produces
+  systematically worse vectors.
+- **The tokenizer must be the model's own.** Ids from another vocabulary are all in range and the
+  model still runs, embedding different words than your text contained. The fingerprint covers the
+  tokenizer file for exactly this reason, so `loadMultiLabel` refuses the pairing rather than
+  letting you discover it in production.
+
 ## At scale
 
 Four things matter above a few hundred thousand records, in this order:

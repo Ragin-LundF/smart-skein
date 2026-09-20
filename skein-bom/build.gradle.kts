@@ -15,6 +15,7 @@ dependencies {
         api("io.github.ragin-lundf:skein-classify:${project.version}")
         api("io.github.ragin-lundf:skein-extract:${project.version}")
         api("io.github.ragin-lundf:skein-store-postgres:${project.version}")
+        api("io.github.ragin-lundf:skein-classify-embedding-onnx:${project.version}")
         api("io.github.ragin-lundf:skein-cli:${project.version}")
     }
 }
