@@ -37,7 +37,14 @@ is no policy here that would suit a local LM Studio and a rate-limited hosted AP
 3. **Open the Developer tab** (the server view), load the model, and **Start Server**. The default
    is `http://localhost:1234`.
 4. **Note the model identifier** LM Studio shows for the loaded model. That exact string goes into
-   `EmbeddingServiceConfig.model`.
+   `EmbeddingServiceConfig.model`, and it is not guessable — the same weights are
+   `multilingual-e5-small-mlx` on a machine that pulled the MLX conversion and something else
+   elsewhere. `curl http://localhost:1234/v1/models` lists the ids your server knows. A wrong id
+   comes back as HTTP 400 with the server's own message.
+
+   > `/v1/models` lists what is **downloaded**, not what is **loaded**. Unless just-in-time
+   > loading is on, an id can be listed and still answer `"No models loaded"` until you run
+   > `lms load <id>`. `lms ps` shows what is actually resident.
 5. **Check it answers:**
 
    ```bash
@@ -248,11 +255,30 @@ Recorded in [ADR 0002](../adr/0002-vector-canary.md).
 | Data residency | Every record's text leaves your process. For a hosted API it leaves your infrastructure. If that is a problem, route A is the answer. |
 | Cost | A hosted API charges per token. Deduplicate first — see [Scale](../classify/scale.md). |
 
-## Runnable example
+## Runnable examples
+
+Two, answering different questions.
 
 ```bash
 ./gradlew :examples:run --args="embedding-service"
 ```
 
-With a server up it trains the recipe tagger on service embeddings and scores it against a
-hand-written held-out set, next to the hashing baseline. Without one it prints the setup steps.
+**Is this worth it?** With a server up it discovers a model, trains the recipe tagger on its
+embeddings, and scores it against a hand-written held-out set next to the hashing baseline.
+Without one it prints the setup steps.
+
+```bash
+./gradlew :examples:run --args="localai"
+```
+
+**How do I run it safely?** Discovers the model, calibrates the canary tolerance against it,
+trains, saves and reloads, and then stages a model swap so you can watch the canary catch it.
+With no server reachable it starts an in-process stub and runs the whole thing against that —
+including the swap, which a real server cannot be asked to perform on demand.
+
+Its pieces are written to be lifted:
+[`ModelDiscovery`](../../examples/src/main/kotlin/io/skein/examples/localai/ModelDiscovery.kt) for
+finding a model that actually embeds, and
+[`CanaryCalibrator`](../../examples/src/main/kotlin/io/skein/examples/localai/CanaryCalibrator.kt)
+for measuring drift — at startup to choose a tolerance, and on a timer in a long-running service
+to notice a model that changed while you held it open.

@@ -88,11 +88,20 @@ data class EmbeddingServiceConfig(
         const val DEFAULT_TIMEOUT_SECONDS = 120L
 
         /**
-         * LM Studio's default local server, with a small multilingual model.
+         * A starting point for LM Studio's default local server.
          *
          * `multilingual-e5-small` covers around 100 languages at 384 dimensions and roughly half a
-         * gigabyte on disk, which is the practical sweet spot for running locally on a CPU. Its
-         * `"passage: "` prefix is mandatory, not decorative.
+         * gigabyte on disk, which is the practical sweet spot for running locally on a CPU.
+         *
+         * **Confirm [model] against your own server before relying on this.** The identifier is
+         * whatever LM Studio chose when the model was downloaded, and it varies with the build —
+         * the same weights appear as `multilingual-e5-small-mlx` on a machine that pulled the MLX
+         * conversion, for instance. `GET /v1/models` lists the ids your server knows. A wrong id
+         * is an HTTP 400, which [HttpEmbeddingVectorizer] reports with the server's own message.
+         *
+         * Note that `/v1/models` lists what is **downloaded**, not what is **loaded**. Unless
+         * just-in-time loading is enabled, an id can be listed and still answer
+         * `"No models loaded"` until you run `lms load <id>`.
          */
         fun lmStudioMultilingualE5Small(): EmbeddingServiceConfig {
             return EmbeddingServiceConfig(

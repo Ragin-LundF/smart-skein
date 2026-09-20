@@ -102,6 +102,14 @@ All notable changes to this project will be documented in this file.
   binary-compatibility-validator plugin, whose bundled ASM cannot read JDK 25 class files. The
   `HashingConfig` break below was found by reading a diff; this is so the next one is not.
 - **[`docs/migration.md`](docs/migration.md)** — what a 1.2.0 consumer has to do to move to 2.0.0.
+- **`localai` example** (`examples`) — `io.skein.examples.localai`, the operational half of route
+  B: discover the served model, calibrate the canary tolerance against it, train, save, reload,
+  then watch a model swap get caught. `ModelDiscovery` finds a model that actually embeds (the
+  identifier is not guessable, and `/v1/models` lists what is *downloaded*, not what is *loaded*);
+  `CanaryCalibrator` measures drift so a tolerance is chosen from data and can be re-checked on a
+  timer; `StubEmbeddingServer` is a development double whose weights change mid-run, which is the
+  only way to stage a model swap in a test. `embedding-service` now discovers its model through
+  the same code instead of hard-coding an identifier.
 - **Restructured documentation** — every module carries a short `README.md` stating what it is and
   when to use it, linking into depth under [`docs/`](docs). New: an
   [index](docs/README.md), [getting started](docs/getting-started.md),
@@ -146,6 +154,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- **`./gradlew :examples:run -Dskein.onnx.model=...` had no effect.** Gradle's `-D` sets a property
+  on the daemon's JVM, not on the forked one `run` starts, so the ONNX example never saw the model
+  path and printed its "No model configured" help — including when the user had followed the
+  instructions that example itself printed. `examples` now forwards those two properties.
 - **Published POM metadata.** Every module published a POM whose `<name>` was just the artifact id
   and whose `<description>` was the placeholder "Skein Library", discarding the `publishName` and
   `publishDescription` each build file sets. The publishing convention is applied from a module's

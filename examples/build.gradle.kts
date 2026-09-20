@@ -24,3 +24,12 @@ dependencies {
 application {
     mainClass = "io.skein.examples.MainKt"
 }
+
+// `./gradlew :examples:run -Dskein.onnx.model=...` sets the property on the Gradle daemon's JVM,
+// not on the forked one this task starts, so without forwarding it an example never sees it and
+// prints its "not configured" help instead -- including when the user followed the instructions
+// that example itself printed. Everything under `skein.` is forwarded, so a new example can read
+// a new property without touching this file.
+tasks.named<JavaExec>("run") {
+    systemProperties(providers.systemPropertiesPrefixedBy("skein.").get())
+}

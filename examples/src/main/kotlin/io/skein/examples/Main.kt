@@ -9,6 +9,7 @@ import io.skein.examples.embedding.runExternalEmbeddingExample
 import io.skein.examples.embedding.runLocalOnnxEmbeddingExample
 import io.skein.examples.explain.runExplainAndCalibrateExample
 import io.skein.examples.importing.runRecordImportExample
+import io.skein.examples.localai.runLocalAiExample
 import io.skein.examples.logwatch.logWatchMain
 import io.skein.examples.patternmatching.runTokenPatternExample
 import io.skein.examples.persistence.runModelPersistenceExample
@@ -52,6 +53,9 @@ private val USAGE = """
                         Needs an exported model; prints the export command if absent.
       embedding-service Route B: embeddings from LM Studio or any OpenAI-compatible server.
                         Prints the setup if no server is reachable.
+      localai           Operating route B safely: discover the model, calibrate the canary
+                        tolerance, and watch a model swap get caught. Falls back to an
+                        in-process stub server when no real one answers.
       explain           Calibrate confidences, abstain on low confidence, and explain a prediction.
       clidemo           Schema inference + active learning loop with equivalent CLI command hints.
       tokenization      WHITESPACE vs PUNCTUATION_AWARE mode comparison.
@@ -86,6 +90,7 @@ private val DISPATCH: Map<String, () -> Unit> = mapOf(
     "recipes" to ::runRecipeTaggingExample,
     "embedding-onnx" to ::runLocalOnnxEmbeddingExample,
     "embedding-service" to ::runExternalEmbeddingExample,
+    "localai" to ::runLocalAiExample,
     "explain" to ::runExplainAndCalibrateExample,
     "clidemo" to ::runCliDemoExample,
     "tokenization" to ::runTokenizationModesExample,

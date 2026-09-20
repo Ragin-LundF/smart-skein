@@ -1,7 +1,12 @@
 package io.skein.examples.embedding
 
+import io.skein.classify.embedding.http.domain.EmbeddingProbes
 import io.skein.classify.embedding.http.domain.EmbeddingServiceConfig
 import io.skein.classify.embedding.http.infrastructure.HttpEmbeddingVectorizer
+import io.skein.examples.localai.ModelDiscovery
+
+/** Where a local OpenAI-compatible server usually lives. */
+private const val DEFAULT_BASE_URL = "http://localhost:1234/v1"
 
 /**
  * Route B — embeddings from an external service, here LM Studio.
@@ -10,19 +15,38 @@ import io.skein.classify.embedding.http.infrastructure.HttpEmbeddingVectorizer
  * scores it against the hand-written held-out set. Run it without one and it prints the setup.
  */
 fun runExternalEmbeddingExample() {
-    val config = EmbeddingServiceConfig.lmStudioMultilingualE5Small()
-    val vectorizer = HttpEmbeddingVectorizer(config = config)
+    val baseUrl = System.getProperty("skein.localai.url") ?: DEFAULT_BASE_URL
 
     println("External embedding service — route B")
     println("=".repeat(n = 78))
-    println("endpoint : ${config.embeddingsUrl()}")
-    println("model    : ${config.model}  (revision ${config.modelRevision})")
-    println("prefix   : '${config.inputPrefix}'")
+    println("endpoint : $baseUrl/embeddings")
 
-    if (!vectorizer.isReachable()) {
-        printSetupInstructions(config = config)
+    // Discovered rather than hard-coded: the identifier is whatever the server called the
+    // download, so the same weights are `multilingual-e5-small-mlx` on one machine and something
+    // else on the next. See io.skein.examples.localai.ModelDiscovery for why this is not one line.
+    val discovered = ModelDiscovery.firstEmbeddingModel(
+        baseUrl = baseUrl,
+        preferred = System.getProperty("skein.localai.model"),
+    )
+    if (discovered == null) {
+        println()
+        println(ModelDiscovery.diagnose(baseUrl = baseUrl))
+        printSetupInstructions()
         return
     }
+
+    val config = EmbeddingServiceConfig(
+        baseUrl = baseUrl,
+        model = discovered.id,
+        modelRevision = "${discovered.id}@1",
+        inputPrefix = System.getProperty("skein.localai.prefix") ?: "",
+        dimension = discovered.dimension,
+        canaryProbes = EmbeddingProbes.DEFAULT,
+    )
+    val vectorizer = HttpEmbeddingVectorizer(config = config)
+
+    println("model    : ${config.model}  (revision ${config.modelRevision})")
+    println("prefix   : '${config.inputPrefix}'  (set with -Dskein.localai.prefix=...)")
 
     println("dimension: ${vectorizer.dimension()}")
     println("fingerprint digest: ${vectorizer.fingerprint().configDigest.take(n = 16)}...")
@@ -59,21 +83,22 @@ private fun reportCanary(vectorizer: HttpEmbeddingVectorizer) {
     println("   the tolerance and loadMultiLabel would throw VectorizerCanaryException.")
 }
 
-private fun printSetupInstructions(config: EmbeddingServiceConfig) {
-    println()
-    println("No embedding service answered at ${config.embeddingsUrl()}.")
+private fun printSetupInstructions() {
     println()
     println("To run this example with LM Studio:")
     println("  1. Install LM Studio and open the Discover tab.")
     println("  2. Download an embedding model. 'multilingual-e5-small' is a good default:")
     println("     384 dimensions, ~100 languages, about half a gigabyte, comfortable on a CPU.")
     println("  3. Open the Developer tab, load the model, and start the server (default port 1234).")
-    println("  4. Confirm the model id LM Studio reports and set it in EmbeddingServiceConfig.model.")
+    println("  4. This example discovers the model id itself; pin it in production.")
     println("  5. Re-run:  ./gradlew :examples:run --args=\"embedding-service\"")
     println()
     println("Ollama works the same way:")
     println("     ollama pull snowflake-arctic-embed2  &&  ollama serve")
     println("     baseUrl = \"http://localhost:11434/v1\"")
+    println()
+    println("Operating this safely — discovery, canary calibration, catching a model swap:")
+    println("     ./gradlew :examples:run --args=\"localai\"")
     println()
     println("Full setup, model choices and the training workflow:")
     println("     docs/embeddings/external-service.md")

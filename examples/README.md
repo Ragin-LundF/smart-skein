@@ -14,7 +14,8 @@ Everything here is meant to be read as much as run.
 | Example | Shows |
 |---|---|
 | `recipes` | **Multi-label classification end to end.** A model distilled from a JSON keyword ruleset: grouped against ungrouped cross-validation, a threshold sweep, per-label thresholds, an explained prediction, and a hand-written held-out set using wording the rules never mention |
-| `embedding-service` | Embeddings from LM Studio or any OpenAI-compatible server, compared against the hashing baseline. Prints the setup if no server is reachable |
+| `embedding-service` | **Are embeddings worth it?** Discovers a model on LM Studio or any OpenAI-compatible server, trains on it, and scores it against the hashing baseline on wording the rules never mention |
+| `localai` | **How do I run that safely?** Discover the model, calibrate the canary tolerance against it, then watch a model swap get caught. Falls back to an in-process stub server, so it runs with nothing installed |
 | `embedding-onnx` | An embedding model run in-process through ONNX Runtime. Prints the export command if no model is configured |
 | `transaction` | Classify → route → extract, the original end-to-end pipeline |
 
@@ -79,12 +80,32 @@ this is the only thing that measures whether it generalises past them.
 |---|---|
 | [`RecipeRuleset`](src/main/kotlin/io/skein/examples/recipes/RecipeRuleset.kt) | A rule interpreter in a dozen lines, making the point that the library never sees your rule format |
 | [`EmbeddingComparison`](src/main/kotlin/io/skein/examples/embedding/EmbeddingComparison.kt) | Scoring a hashing baseline against an embedding vectorizer on the same held-out set — the measurement that decides whether embeddings are worth it for you |
+| [`ModelDiscovery`](src/main/kotlin/io/skein/examples/localai/ModelDiscovery.kt) | Finding a model on an OpenAI-compatible server that *actually embeds*. The id is not guessable and `/v1/models` lists what is downloaded rather than loaded |
+| [`CanaryCalibrator`](src/main/kotlin/io/skein/examples/localai/CanaryCalibrator.kt) | Measuring your own model's drift so a canary tolerance is chosen from data, and reporting drift on a timer without failing the caller |
+| [`StubEmbeddingServer`](src/main/kotlin/io/skein/examples/localai/StubEmbeddingServer.kt) | A development double, **not** for production: an in-process embeddings endpoint whose weights you can change mid-run, which is the only way to stage a model swap in a test |
 
 `HttpEmbeddingVectorizer` used to live here as a copy-me file. It is now
 [`skein-classify-embedding-http`](../skein-classify-embedding-http), a published module, because a
 supported route B needs a supported artifact. The parts people actually changed in their copies are
 configuration now: auth headers go in `EmbeddingServiceConfig.headers`, and anything about
 retries, proxies or pooling belongs in your own `EmbeddingTransport`.
+
+## Running the local-AI example
+
+```bash
+./gradlew :examples:run --args="localai"                                    # finds a server, or stubs one
+./gradlew :examples:run --args="localai" -Dskein.localai.url=http://localhost:11434/v1   # Ollama
+./gradlew :examples:run --args="localai" -Dskein.localai.model=<id>         # skip discovery
+```
+
+Every `-Dskein.*` property is forwarded to the example's JVM. With no server reachable it starts
+[`StubEmbeddingServer`](src/main/kotlin/io/skein/examples/localai/StubEmbeddingServer.kt) on a
+loopback port and runs the whole walkthrough against that — including the model swap, which a real
+server cannot be asked to perform on demand.
+
+[`LocalAiVerificationTest`](src/test/kotlin/io/skein/examples/localai/LocalAiVerificationTest.kt)
+asserts the same behaviour the example prints, so the guarantees it teaches cannot quietly stop
+being true. It runs in the ordinary build, with no service installed.
 
 ## Documentation
 
