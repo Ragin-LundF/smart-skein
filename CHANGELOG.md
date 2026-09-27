@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Removed
+
+- **Binary-compatibility validation** — the `skein.api-conventions` plugin, `checkKotlinAbi` in
+  `check`, and the ABI dumps under `<module>/api/`. Binary compatibility between releases is no
+  longer guaranteed; consumers should recompile against each new version.
+
 ## [2.0.0] - 2026-09-20
 
 ### Added

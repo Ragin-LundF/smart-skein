@@ -2,7 +2,6 @@ plugins {
     kotlin("jvm")
     `java-library`
     id("skein.published-library-conventions")
-    id("skein.api-conventions")
     id("skein.benchmark-conventions")
     id("skein.coverage-conventions")
     alias(libs.plugins.kotlin.serialization)

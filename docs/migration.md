@@ -26,10 +26,6 @@ The same applies to `LoadedMultiLabelModel`, which gained `canary`, and to
 
 Recompiling against 2.0.0 is the entire migration.
 
-> From 2.0.0 on, this class of change cannot reach a release unnoticed: every published module
-> carries an ABI dump under `<module>/api/`, and `checkKotlinAbi` fails the build when the public
-> surface moves. The 1.2.0 break was found by reading a diff.
-
 ## 2. Multi-label model files are not readable by 1.x
 
 `.skein` files carry a magic number, a one-byte version, and a GZIPped ProtoBuf payload. **The

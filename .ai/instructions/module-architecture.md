@@ -117,5 +117,4 @@ an independently versioned deliverable.
 A new module must: use the four-package layout (a layer with nothing stateful in it stays empty
 rather than gaining a class for symmetry), declare its own coverage and static-analysis gates
 through the shared convention plugins, carry a README describing its responsibility, and — if it is
-published — be added to the BOM, apply `skein.api-conventions`, and commit an ABI dump produced by
-`./gradlew updateKotlinAbi`.
+published — be added to the BOM.
